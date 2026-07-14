@@ -1,5 +1,11 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Setup
+
+1. Copy `.env.local.example` to `.env.local`.
+2. Add your [Google AI Studio](https://aistudio.google.com/apikey) API key as `GEMINI_API_KEY` in `.env.local`.
+3. Run `npm install && npm run dev`.
+
 ## Getting Started
 
 First, run the development server:
