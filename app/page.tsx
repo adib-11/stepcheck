@@ -14,6 +14,11 @@ import LandingHero from "@/components/LandingHero";
 const MathInput = dynamic(() => import("@/components/MathInput"), {
   ssr: false,
 });
+// Read-only counterpart to MathInput for displaying (not editing) LaTeX —
+// same DOM-touching custom-element constraint applies, hence client-only.
+const MathView = dynamic(() => import("@/components/MathView"), {
+  ssr: false,
+});
 
 interface StepFeedback {
   stepIndex: number;
@@ -470,9 +475,9 @@ export default function Home() {
               {solved.steps.map((step) => (
                 <div key={step.stepIndex} className="rounded-md border border-border bg-muted/40 p-3 text-sm">
                   <p className="font-medium text-ink">Step {step.stepIndex + 1}</p>
-                  <code className="mt-1 block rounded bg-muted px-2 py-1 font-mono">
-                    {step.workLatex}
-                  </code>
+                  <div className="mt-1 rounded bg-muted px-2 py-1">
+                    <MathView latex={step.workLatex} />
+                  </div>
                   <p className="mt-1 text-ink-muted">{step.explanation}</p>
                 </div>
               ))}
@@ -480,9 +485,9 @@ export default function Home() {
 
             <div className="rounded-md border border-mark-correct/30 bg-mark-correct/10 p-3 text-sm">
               <p className="font-medium text-ink">Final answer</p>
-              <code className="mt-1 block rounded bg-muted px-2 py-1 font-mono">
-                {solved.finalAnswerLatex}
-              </code>
+              <div className="mt-1 rounded bg-muted px-2 py-1">
+                <MathView latex={solved.finalAnswerLatex} />
+              </div>
             </div>
 
             <Button variant="outline" size="sm" onClick={startOver} className="self-start">
@@ -530,9 +535,9 @@ export default function Home() {
                         Step {i + 1}
                         {fb ? ` — ${fb.status.replace("_", " ")}` : ""}
                       </p>
-                      <code className="block rounded bg-muted px-2 py-1 font-mono text-ink">
-                        {stepLatex}
-                      </code>
+                      <div className="rounded bg-muted px-2 py-1 text-ink">
+                        <MathView latex={stepLatex} />
+                      </div>
                       {fb && <p className="text-ink-muted">{fb.explanation}</p>}
                     </div>
                   </div>
@@ -548,9 +553,11 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="font-medium text-ink">Correct continuation</p>
-                  <code className="mt-1 block rounded bg-muted px-2 py-1 font-mono">
-                    {analysis.correctContinuation}
-                  </code>
+                  <div className="mt-1 rounded bg-muted px-2 py-1">
+                    {analysis.correctContinuation && (
+                      <MathView latex={analysis.correctContinuation} />
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="font-medium text-ink">Why</p>
