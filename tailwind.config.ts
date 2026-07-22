@@ -10,21 +10,41 @@ const config: Config = {
   theme: {
   	extend: {
   		fontFamily: {
-  			display: ['var(--font-display)', 'serif'],
-  			body: ['var(--font-body)', 'sans-serif'],
+  			display: ['var(--font-inter)', 'sans-serif'],
+  			body: ['var(--font-inter)', 'sans-serif'],
   			mono: ['var(--font-geist-mono)', 'monospace'],
   		},
   		colors: {
-  			paper: '#F7F8F4',
-  			grid: '#C9DAE3',
+  			// Mintlify system (see DESIGN.md). Token names kept from the old
+  			// system where components already reference them (paper, ink,
+  			// ink-muted, mark-*) so existing classes recolor in place.
+  			paper: '#ffffff',            // {colors.canvas}
+  			surface: {
+  				DEFAULT: '#f7f7f7',        // {colors.surface}
+  				soft: '#fafafa',           // {colors.surface-soft}
+  			},
+  			hairline: {
+  				DEFAULT: '#e5e5e5',        // {colors.hairline}
+  				soft: '#ededed',           // {colors.hairline-soft}
+  			},
+  			charcoal: '#1c1c1e',         // {colors.charcoal} — pressed primary
   			ink: {
-  				DEFAULT: '#1E3A5F',
-  				muted: '#5B6B7A',
+  				DEFAULT: '#0a0a0a',        // {colors.ink}
+  				muted: '#5a5a5c',          // {colors.steel}
+  			},
+  			brand: {
+  				DEFAULT: '#00d4a4',        // {colors.brand-green} — accent only
+  				deep: '#00b48a',           // {colors.brand-green-deep}
+  				soft: '#7cebcb',           // {colors.brand-green-soft}
   			},
   			mark: {
-  				correct: '#2F6B4F',
-  				error: '#B23A2E',
-  				flag: '#C98A2C',
+  				correct: '#1ba673',        // {colors.brand-annotate}
+  				error: '#d45656',          // {colors.brand-error}
+  				flag: '#c37d0d',           // {colors.brand-warn}
+  			},
+  			hero: {
+  				from: '#87a8c8',           // {colors.hero-sky-from}
+  				to: '#f5e9d8',             // {colors.hero-sky-to}
   			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
@@ -69,8 +89,8 @@ const config: Config = {
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			md: 'calc(var(--radius) - 4px)',
+  			sm: 'calc(var(--radius) - 6px)'
   		}
   	}
   },
