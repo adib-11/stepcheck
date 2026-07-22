@@ -15,15 +15,40 @@ interface ImageUploadProps {
   onChange: (image: UploadedImage | null) => void;
 }
 
-/** Reads a File into a data URL, then splits it into base64 + mime type. */
+// Vercel's request-body limit is 4.5MB, and base64 inflates bytes by ~33%,
+// so anything much over ~3MB raw would be rejected by the platform before
+// our route even runs. Large photos get downscaled to fit instead of
+// bouncing the student's upload with an opaque error.
+const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
+const MAX_DIMENSION = 1600;
+
+/** Reads a File into a data URL, downscaling to JPEG if it's too large. */
 function readFile(file: File): Promise<UploadedImage> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Could not read the file."));
     reader.onload = () => {
       const dataUrl = reader.result as string;
-      const base64 = dataUrl.split(",")[1] ?? "";
-      resolve({ base64, mimeType: file.type, previewUrl: dataUrl });
+      if (file.size <= MAX_UPLOAD_BYTES) {
+        resolve({ base64: dataUrl.split(",")[1] ?? "", mimeType: file.type, previewUrl: dataUrl });
+        return;
+      }
+      const img = new Image();
+      img.onerror = () => reject(new Error("Could not read the image."));
+      img.onload = () => {
+        const scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const scaledUrl = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({
+          base64: scaledUrl.split(",")[1] ?? "",
+          mimeType: "image/jpeg",
+          previewUrl: scaledUrl,
+        });
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   });

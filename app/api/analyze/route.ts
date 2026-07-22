@@ -125,9 +125,14 @@ export async function POST(request: Request) {
 
   const { problemStatementLatex, confirmedSteps } = await request.json();
 
-  if (!problemStatementLatex || !Array.isArray(confirmedSteps) || confirmedSteps.length === 0) {
+  if (
+    !problemStatementLatex ||
+    !Array.isArray(confirmedSteps) ||
+    confirmedSteps.length === 0 ||
+    !confirmedSteps.every((s: unknown) => typeof s === "string")
+  ) {
     return NextResponse.json(
-      { error: "problemStatementLatex and a non-empty confirmedSteps array are required." },
+      { error: "problemStatementLatex and a non-empty array of string confirmedSteps are required." },
       { status: 400 }
     );
   }

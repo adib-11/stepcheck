@@ -28,7 +28,7 @@ export default function StepMark({
   return (
     <svg
       viewBox="0 0 20 20"
-      className="h-5 w-5 shrink-0"
+      className={`h-5 w-5 shrink-0 ${isCorrect ? "text-mark-correct" : "text-mark-error"}`}
       style={{
         animation: "mark-in 0.3s ease-out both",
         animationDelay: `${delayMs}ms`,
@@ -39,7 +39,7 @@ export default function StepMark({
         <path
           d="M3 10.5 L8 15.5 L17 4"
           fill="none"
-          stroke="#2F6B4F"
+          stroke="currentColor"
           strokeWidth="2.25"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -49,14 +49,14 @@ export default function StepMark({
           <path
             d="M4 4 L16 16"
             fill="none"
-            stroke="#B23A2E"
+            stroke="currentColor"
             strokeWidth="2.25"
             strokeLinecap="round"
           />
           <path
             d="M16 4 L4 16"
             fill="none"
-            stroke="#B23A2E"
+            stroke="currentColor"
             strokeWidth="2.25"
             strokeLinecap="round"
           />

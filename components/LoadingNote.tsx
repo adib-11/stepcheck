@@ -19,7 +19,7 @@ export default function LoadingNote({ label }: { label: string }) {
 
   return (
     <p className="text-xs text-ink-muted" role="status" aria-live="polite">
-      {label} This can take up to a minute — {seconds}s so far.
+      {label} This can take a couple of minutes — {seconds}s so far.
     </p>
   );
 }
