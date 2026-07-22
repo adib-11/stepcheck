@@ -214,16 +214,16 @@ export default function Home() {
   }
 
   const header = (
-    <header className="flex flex-col gap-3">
+    <header className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         {screen !== "landing" && (
           <button
             type="button"
             onClick={goBack}
             aria-label="Go back"
-            className="rounded-md p-1 text-ink-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-hairline bg-white text-ink-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <svg viewBox="0 0 20 20" className="h-5 w-5" aria-hidden fill="none">
+            <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden fill="none">
               <path
                 d="M12.5 4.5 6 10l6.5 5.5"
                 stroke="currentColor"
@@ -235,22 +235,29 @@ export default function Home() {
           </button>
         )}
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
             StepCheck
           </h1>
-          <p className="mt-1 text-sm text-ink-muted sm:text-base">
+          <p className="mt-0.5 text-sm text-ink-muted">
             Line by line, like a marker would.
           </p>
         </div>
       </div>
 
-      <nav aria-label="Progress" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+      {/* Progress as pill-tab chips (pill-tab / pill-tab-active): the
+          current-and-done stages get the black pill, upcoming stages the
+          outlined pill. */}
+      <nav aria-label="Progress" className="flex flex-wrap items-center gap-2">
         {STAGE_LABELS.map((label, i) => (
-          <span key={label} className="flex items-center gap-2">
-            <span className={i + 1 <= stage ? "font-medium text-ink" : "text-ink-muted/60"}>
-              {i + 1}. {label}
-            </span>
-            {i < STAGE_LABELS.length - 1 && <span aria-hidden>—</span>}
+          <span
+            key={label}
+            className={
+              i + 1 <= stage
+                ? "rounded-full bg-ink px-3 py-1 text-xs font-medium text-white"
+                : "rounded-full border border-hairline bg-white px-3 py-1 text-xs font-medium text-ink-muted"
+            }
+          >
+            {i + 1}. {label}
           </span>
         ))}
       </nav>
