@@ -32,37 +32,50 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
   const cycle = useDemoCycle(DEMO_STEPS.length, 2600);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-10 px-4 py-16 text-center sm:px-6">
-      <div className="flex flex-col gap-3">
-        <h1 className="font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-          StepCheck
-        </h1>
-        <p className="max-w-md text-balance text-base text-ink-muted sm:text-lg">
-          Line by line, like a marker would. Photograph your working and
-          get a tick or a cross on every step, not just a final grade.
-        </p>
-      </div>
-
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-16 text-center sm:px-6">
+      {/* Atmospheric sky band — the one gradient moment in the app
+          (hero-band-sky, DESIGN.md). Fades into the white canvas. */}
       <div
-        className="flex w-full max-w-sm flex-col gap-3 rounded-lg border border-border bg-card p-5 text-left"
         aria-hidden
-      >
-        {DEMO_STEPS.map((step, i) => (
-          <div
-            key={`${cycle}-${i}`}
-            className="flex items-center gap-3 rounded-md border border-border bg-muted/40 p-3 text-sm"
-          >
-            <div className="flex w-5 flex-shrink-0 justify-center border-r border-border pr-3">
-              <StepMark status={step.status} delayMs={i * 350} />
-            </div>
-            <code className="font-mono text-ink">{step.latex}</code>
-          </div>
-        ))}
-      </div>
+        className="absolute inset-x-0 top-0 -z-10 h-[65vh] bg-gradient-to-b from-hero-from/60 via-hero-to/50 to-white"
+      />
 
-      <Button size="lg" onClick={onStart} className="px-8">
-        Check my work
-      </Button>
+      <div className="flex w-full max-w-2xl flex-col items-center gap-10">
+        <div className="flex flex-col items-center gap-4">
+          <h1 className="font-display text-5xl font-semibold tracking-[-0.02em] text-ink sm:text-6xl">
+            StepCheck
+          </h1>
+          <p className="max-w-md text-balance text-lg text-ink-muted">
+            Line by line, like a marker would. Photograph your working and
+            get a tick or a cross on every step, not just a final grade.
+          </p>
+        </div>
+
+        {/* Demo card styled as the hero product mockup: white card, soft
+            hairline border, deep diffuse drop shadow (hero-product-mockup). */}
+        <div
+          className="flex w-full max-w-sm flex-col gap-3 rounded-lg border border-hairline-soft bg-white p-6 text-left shadow-[0_24px_48px_-8px_rgba(0,0,0,0.12)]"
+          aria-hidden
+        >
+          {DEMO_STEPS.map((step, i) => (
+            <div
+              key={`${cycle}-${i}`}
+              className="flex items-center gap-3 rounded-md border border-hairline-soft bg-surface-soft p-3 text-sm"
+            >
+              <div className="flex w-5 flex-shrink-0 justify-center border-r border-hairline pr-3">
+                <StepMark status={step.status} delayMs={i * 350} />
+              </div>
+              <code className="font-mono text-sm text-ink">{step.latex}</code>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button variant="accent" size="lg" onClick={onStart} className="px-8">
+            Check my work
+          </Button>
+        </div>
+      </div>
     </main>
   );
 }
