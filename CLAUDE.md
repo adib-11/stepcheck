@@ -88,21 +88,20 @@ it's an explicit design constraint, not an oversight.
 
 ## Design system
 
-See [DESIGN.md](DESIGN.md) for the full rationale. In short: the palette and
-type choices are built around "exam paper + red pen" (an HSC marker's red
-pen on ruled paper), not generic ed-tech blue or AI-chat purple — deliberate,
-not arbitrary:
+See [DESIGN.md](DESIGN.md). The app uses the Mintlify design system:
+white canvas, hairline borders, black pill buttons, mint-green accent.
 
-- Colors are semantic tokens (`paper`, `ink`, `ink-muted`, `mark-correct`,
-  `mark-error`, `mark-flag`), defined in `tailwind.config.ts` /
-  `app/globals.css` and used by name (`text-ink`, `border-mark-error/30`,
-  etc.), never as raw hex or generic Tailwind palette colors (`text-blue-600`).
-- Fonts: Fraunces (`font-display`) for headings/verdicts, IBM Plex Sans for
-  body, Geist Mono (self-hosted in `app/fonts`) for raw LaTeX/JSON debug
-  output only. Do not introduce Inter or `font-sans` defaults.
-- `mark-correct`/`mark-error`/`mark-flag` are reserved for grading semantics
-  (tick/cross/low-confidence) — don't repurpose them as generic UI accent
-  colors.
+- Colors are semantic tokens (`surface`, `hairline`, `ink`, `ink-muted`,
+  `brand`, `mark-correct`, `mark-error`, `mark-flag`) defined in
+  `tailwind.config.ts` / `app/globals.css` and used by name, never as raw
+  hex or generic Tailwind palette colors (`text-blue-600`).
+- Fonts: Inter for all UI prose and headings (`font-display` and
+  `font-body` both resolve to it), Geist Mono (self-hosted in
+  `app/fonts`) for code/raw LaTeX/JSON only. No third typeface.
+- All buttons are pills (`rounded-full`); cards 12px, inputs 8px radius.
+- `brand` mint is accent-only (CTAs, focus ring, active states);
+  `mark-correct`/`mark-error`/`mark-flag` are reserved for grading
+  semantics — don't repurpose either as generic UI colors.
 
 ## Import alias
 
