@@ -77,9 +77,10 @@ export default function MathInput({
           width: "100%",
           minHeight: "3.5rem",
           fontSize: "1.25rem",
-          padding: "0.75rem 1rem",
-          borderRadius: "0.5rem",
-          border: "1px solid hsl(var(--border))",
+          padding: "0.65rem 1rem",
+          borderRadius: "0.5rem", // 8px — {rounded.md}, the input radius
+          border: "1px solid #e5e5e5", // {colors.hairline}
+          backgroundColor: "#ffffff",
         }}
       >
         {defaultValue}

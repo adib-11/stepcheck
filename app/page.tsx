@@ -278,7 +278,7 @@ export default function Home() {
         <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
           {header}
 
-          <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+          <section className="flex flex-col gap-4 rounded-lg border border-hairline bg-white p-6">
             <label className="text-sm font-medium text-ink">
               Page 1 — Photo of the problem (and your working, if you have any)
             </label>
@@ -289,7 +289,7 @@ export default function Home() {
             {isTranscribing && <LoadingNote label="Gemma is reading your photo." />}
 
             {transcribeError && (
-              <div className="flex flex-col gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+              <div className="flex flex-col gap-2 rounded-md border border-mark-error/40 bg-mark-error/5 p-4 text-sm">
                 <p className="font-medium text-destructive">Couldn&apos;t read that photo</p>
                 <p className="text-ink-muted">{transcribeError}</p>
                 <p className="text-ink-muted">
@@ -322,9 +322,9 @@ export default function Home() {
           {header}
 
           {transcribeResult && (
-            <section className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
+            <section className="flex flex-col gap-5 rounded-lg border border-hairline bg-white p-6">
               <div>
-                <h2 className="font-display text-lg font-semibold text-ink">
+                <h2 className="font-display text-xl font-semibold tracking-tight text-ink">
                   Page 2 — Confirm what was read
                 </h2>
                 <p className="text-sm text-ink-muted">
@@ -339,7 +339,7 @@ export default function Home() {
                 <img
                   src={image.previewUrl}
                   alt="Your uploaded photo"
-                  className="max-h-40 self-start rounded-md border border-border object-contain"
+                  className="max-h-40 self-start rounded-md border border-hairline object-contain"
                 />
               )}
 
@@ -349,7 +349,7 @@ export default function Home() {
               </div>
 
               {steps && transcriptionLooksShaky(steps) && (
-                <div className="rounded-md border border-mark-flag/40 bg-mark-flag/10 p-3 text-sm text-ink">
+                <div className="rounded-md border border-mark-flag/40 bg-mark-flag/5 p-4 text-sm text-ink">
                   <p className="font-medium">Double check these steps carefully</p>
                   <p className="mt-1 text-ink-muted">
                     The transcription looks unusually short for a full

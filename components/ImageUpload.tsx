@@ -105,8 +105,8 @@ export default function ImageUpload({ onChange }: ImageUploadProps) {
           setIsDragging(false);
           void handleFile(e.dataTransfer.files[0]);
         }}
-        className={`flex min-h-[10rem] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-4 text-center text-sm text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-          isDragging ? "border-primary bg-muted" : "border-input"
+        className={`flex min-h-[10rem] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-4 text-center text-sm text-ink-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+          isDragging ? "border-brand bg-brand/5" : "border-hairline bg-surface-soft"
         }`}
       >
         {preview ? (
@@ -114,7 +114,7 @@ export default function ImageUpload({ onChange }: ImageUploadProps) {
           <img
             src={preview}
             alt="Selected handwritten solution"
-            className="max-h-48 rounded object-contain"
+            className="max-h-48 rounded-md object-contain"
           />
         ) : (
           <p>Drag & drop a photo here, or click to choose a JPEG/PNG (max 10MB)</p>
@@ -127,7 +127,7 @@ export default function ImageUpload({ onChange }: ImageUploadProps) {
         className="hidden"
         onChange={(e) => void handleFile(e.target.files?.[0])}
       />
-      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+      {error && <p className="mt-2 text-sm text-mark-error">{error}</p>}
     </div>
   );
 }
