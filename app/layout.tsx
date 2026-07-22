@@ -1,26 +1,20 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Fraunces, IBM_Plex_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-// Kept: Geist Mono is still used for raw LaTeX/JSON debug output.
+// Geist Mono stays: code blocks, raw LaTeX/JSON debug output only.
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
 });
 
-// Display face: stage headings and the correct/incorrect verdict.
-const fraunces = Fraunces({
+// Inter carries all UI prose and headings (Mintlify system — see DESIGN.md).
+// Weights: 400 body, 500 buttons/emphasis, 600 headings.
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["500", "600"],
-});
-
-// Body face: everything else — labels, buttons, feedback text.
-const plexSans = IBM_Plex_Sans({
-  subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-inter",
   weight: ["400", "500", "600"],
 });
 
@@ -37,9 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${fraunces.variable} ${plexSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${inter.variable} ${geistMono.variable} antialiased`}>
         {children}
       </body>
     </html>
