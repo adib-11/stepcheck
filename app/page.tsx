@@ -399,12 +399,12 @@ export default function Home() {
             so this must not look like it's stuck. Only hidden once a
             result or error has actually arrived (isWorking false). */}
         {isWorking && !resultError && !solved && !analysis && (
-          <section className="flex flex-col items-center gap-4 rounded-lg border border-border bg-card p-8 text-center">
+          <section className="flex flex-col items-center gap-4 rounded-lg border border-hairline bg-white p-8 text-center">
             <div className="flex gap-2" aria-hidden>
               {[0, 1, 2].map((i) => (
                 <span
                   key={i}
-                  className="h-3 w-3 rounded-full bg-ink/40"
+                  className="h-3 w-3 rounded-full bg-brand"
                   style={{
                     animation: "mark-in 1s ease-in-out infinite alternate",
                     animationDelay: `${i * 200}ms`,
@@ -413,7 +413,7 @@ export default function Home() {
               ))}
             </div>
             <div>
-              <p className="font-display text-lg font-semibold text-ink">
+              <p className="font-display text-xl font-semibold tracking-tight text-ink">
                 {confirmed?.steps ? "Marking your solution\u2026" : "Solving your problem\u2026"}
               </p>
               <p className="mt-1 text-sm text-ink-muted">
@@ -430,8 +430,8 @@ export default function Home() {
             so retrying re-runs the same call only — no re-upload or
             re-transcription required. */}
         {resultError && (
-          <section className="flex flex-col gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
-            <p className="text-sm font-medium text-destructive">
+          <section className="flex flex-col gap-2 rounded-lg border border-mark-error/40 bg-mark-error/5 p-6">
+            <p className="text-sm font-medium text-mark-error">
               {confirmed?.steps ? "Couldn't finish checking your solution" : "Couldn't finish solving this"}
             </p>
             <p className="text-sm text-ink-muted">{resultError.message}</p>
@@ -452,7 +452,7 @@ export default function Home() {
             {resultError.raw && (
               <details className="text-xs text-ink-muted">
                 <summary className="cursor-pointer">Raw model output</summary>
-                <pre className="mt-1 overflow-x-auto rounded-md border border-border bg-muted p-3 font-mono">
+                <pre className="mt-2 overflow-x-auto rounded-md bg-[#1c1c1e] p-4 font-mono text-xs text-white">
                   {resultError.raw}
                 </pre>
               </details>
@@ -466,9 +466,9 @@ export default function Home() {
             is a plain worked-solution walkthrough, distinct from the
             marking-rail outcomes below. */}
         {solved && (
-          <section className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
-            <div className="rounded-md border border-ink/20 bg-muted/40 p-4">
-              <p className="font-display text-lg font-semibold text-ink">
+          <section className="flex flex-col gap-4 rounded-lg border border-hairline bg-white p-6">
+            <div className="rounded-md bg-surface p-5">
+              <p className="font-display text-xl font-semibold tracking-tight text-ink">
                 Here&apos;s how to solve this
               </p>
               <p className="mt-1 text-sm text-ink-muted">
@@ -480,9 +480,9 @@ export default function Home() {
 
             <div className="flex flex-col gap-3">
               {solved.steps.map((step) => (
-                <div key={step.stepIndex} className="rounded-md border border-border bg-muted/40 p-3 text-sm">
+                <div key={step.stepIndex} className="rounded-md border border-hairline-soft bg-surface-soft p-4 text-sm">
                   <p className="font-medium text-ink">Step {step.stepIndex + 1}</p>
-                  <div className="mt-1 rounded bg-muted px-2 py-1">
+                  <div className="mt-1 rounded-md border border-hairline-soft bg-white px-3 py-2">
                     <MathView latex={step.workLatex} />
                   </div>
                   <p className="mt-1 text-ink-muted">{step.explanation}</p>
@@ -490,9 +490,9 @@ export default function Home() {
               ))}
             </div>
 
-            <div className="rounded-md border border-mark-correct/30 bg-mark-correct/10 p-3 text-sm">
+            <div className="rounded-md border border-mark-correct/30 bg-mark-correct/5 p-4 text-sm">
               <p className="font-medium text-ink">Final answer</p>
-              <div className="mt-1 rounded bg-muted px-2 py-1">
+              <div className="mt-1 rounded-md border border-hairline-soft bg-white px-3 py-2">
                 <MathView latex={solved.finalAnswerLatex} />
               </div>
             </div>
@@ -509,12 +509,12 @@ export default function Home() {
             + the student's own confirmed LaTeX), rather than a separate
             feedback list rendered below a step list. */}
         {analysis && confirmed?.steps && (
-          <section className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
+          <section className="flex flex-col gap-4 rounded-lg border border-hairline bg-white p-6">
             <div
-              className={`rounded-md p-4 font-display text-lg font-semibold ${
+              className={`rounded-md p-5 font-display text-xl font-semibold tracking-tight ${
                 analysis.isCorrect
-                  ? "border border-mark-correct/30 bg-mark-correct/10 text-mark-correct"
-                  : "border border-mark-error/30 bg-mark-error/10 text-mark-error"
+                  ? "border border-mark-correct/30 bg-mark-correct/5 text-mark-correct"
+                  : "border border-mark-error/30 bg-mark-error/5 text-mark-error"
               }`}
             >
               {analysis.isCorrect
@@ -532,9 +532,9 @@ export default function Home() {
                 return (
                   <div
                     key={i}
-                    className="flex gap-3 rounded-md border border-border bg-muted/40 p-3 text-sm"
+                    className="flex gap-3 rounded-md border border-hairline-soft bg-surface-soft p-4 text-sm"
                   >
-                    <div className="flex w-5 flex-shrink-0 justify-center border-r border-border pr-3">
+                    <div className="flex w-5 flex-shrink-0 justify-center border-r border-hairline pr-3">
                       {fb && <StepMark status={fb.status} delayMs={i * 120} />}
                     </div>
                     <div className="flex flex-col gap-1">
@@ -542,7 +542,7 @@ export default function Home() {
                         Step {i + 1}
                         {fb ? ` — ${fb.status.replace("_", " ")}` : ""}
                       </p>
-                      <div className="rounded bg-muted px-2 py-1 text-ink">
+                      <div className="rounded-md border border-hairline-soft bg-white px-3 py-2 text-ink">
                         <MathView latex={stepLatex} />
                       </div>
                       {fb && <p className="text-ink-muted">{fb.explanation}</p>}
@@ -553,14 +553,14 @@ export default function Home() {
             </div>
 
             {!analysis.isCorrect && (
-              <div className="flex flex-col gap-3 rounded-md border border-mark-flag/40 bg-mark-flag/10 p-4 text-sm">
+              <div className="flex flex-col gap-3 rounded-md border border-mark-flag/40 bg-mark-flag/5 p-5 text-sm">
                 <div>
                   <p className="font-medium text-ink">Misconception</p>
                   <p className="mt-1 text-ink-muted">{analysis.misconceptionSummary}</p>
                 </div>
                 <div>
                   <p className="font-medium text-ink">Correct continuation</p>
-                  <div className="mt-1 rounded bg-muted px-2 py-1">
+                  <div className="mt-1 rounded-md border border-hairline-soft bg-white px-3 py-2">
                     {analysis.correctContinuation && (
                       <MathView latex={analysis.correctContinuation} />
                     )}
