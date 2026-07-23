@@ -119,6 +119,10 @@ export default function Home() {
   // untouched, fall back to the step's confirmed LaTeX.
   const [fixLatex, setFixLatex] = useState<string | null>(null);
 
+  const [explainText, setExplainText] = useState("");
+  const [explainFeedback, setExplainFeedback] = useState<{ isSound: boolean; feedback: string } | null>(null);
+  const [isExplaining, setIsExplaining] = useState(false);
+
   const [practice, setPractice] = useState<PracticeProblem[] | null>(null);
   const [isPracticeLoading, setIsPracticeLoading] = useState(false);
   const [practiceError, setPracticeError] = useState<string | null>(null);
@@ -187,6 +191,8 @@ export default function Home() {
     setChatInput("");
     setChatError(null);
     setFixLatex(null);
+    setExplainText("");
+    setExplainFeedback(null);
     setScreen("confirm");
   }
 
@@ -218,6 +224,8 @@ export default function Home() {
     setAnalysis(null);
     setSolved(null);
     setFixLatex(null);
+    setExplainText("");
+    setExplainFeedback(null);
     setPractice(null);
     setPracticeError(null);
     setHints(null);
@@ -371,6 +379,38 @@ export default function Home() {
     }
   }
 
+  async function checkExplanation() {
+    if (!confirmed?.steps || !analysis) return;
+    setIsExplaining(true);
+    setExplainFeedback(null);
+    const idx = analysis.firstErrorStepIndex ?? 0;
+    try {
+      const res = await fetch("/api/explain-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problemStatementLatex: confirmed.problem,
+          stepsLatex: confirmed.steps,
+          fixedStepIndex: idx,
+          fixedStepLatex: fixLatex ?? confirmed.steps[idx],
+          studentExplanation: explainText.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        // ponytail: route errors surface through the same feedback line —
+        // a dedicated error slot only if this proves confusing.
+        setExplainFeedback({ isSound: false, feedback: data.error ?? "Couldn't check that reasoning." });
+        return;
+      }
+      setExplainFeedback(data);
+    } catch {
+      setExplainFeedback({ isSound: false, feedback: "Network error: could not reach the API." });
+    } finally {
+      setIsExplaining(false);
+    }
+  }
+
   function updateStep(index: number, latex: string) {
     setSteps((prev) => {
       if (!prev) return prev;
@@ -393,6 +433,8 @@ export default function Home() {
     setSolved(null);
     setResultError(null);
     setFixLatex(null);
+    setExplainText("");
+    setExplainFeedback(null);
     setPractice(null);
     setPracticeError(null);
     setHints(null);
@@ -904,6 +946,38 @@ export default function Home() {
                   >
                     Re-check my fix
                   </Button>
+                  <div className="mt-3">
+                    <p className="font-medium text-ink">Explain your fix (optional)</p>
+                    <p className="mt-1 text-ink-muted">
+                      Say why your corrected step works — Gemma checks the
+                      reasoning, not just the algebra.
+                    </p>
+                    <textarea
+                      value={explainText}
+                      onChange={(e) => setExplainText(e.target.value)}
+                      rows={2}
+                      placeholder="It works because…"
+                      className="mt-2 w-full rounded-md border border-hairline bg-white px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      disabled={isExplaining || !explainText.trim()}
+                      onClick={checkExplanation}
+                    >
+                      {isExplaining ? "Checking…" : "Check my reasoning"}
+                    </Button>
+                    {explainFeedback && (
+                      <p
+                        className={`mt-2 ${
+                          explainFeedback.isSound ? "text-mark-correct" : "text-mark-flag"
+                        }`}
+                      >
+                        {explainFeedback.feedback}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
