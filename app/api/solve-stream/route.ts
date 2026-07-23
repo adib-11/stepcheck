@@ -47,34 +47,40 @@ export async function POST(request: Request) {
 
   const prompt = `${INSTRUCTION}\n\nProblem statement:\n${problemStatementLatex}`;
 
-  try {
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContentStream({
-      model: MODEL,
-      contents: prompt,
-      config: { temperature: 0 },
-    });
-
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of response) {
-            if (chunk.text) controller.enqueue(encoder.encode(chunk.text));
+  const ai = new GoogleGenAI({ apiKey });
+  const encoder = new TextEncoder();
+  // Same shape as /api/analyze-stream: Gemma call starts inside the stream
+  // so headers go out immediately, with blank-line heartbeats (skipped by
+  // the client's parser) covering Gemma's long first-token wait. Heartbeats
+  // only fire at a line boundary so they never split a JSON line.
+  const stream = new ReadableStream({
+    async start(controller) {
+      let atLineBoundary = true;
+      const heartbeat = setInterval(() => {
+        if (atLineBoundary) controller.enqueue(encoder.encode("\n"));
+      }, 10_000);
+      try {
+        const response = await ai.models.generateContentStream({
+          model: MODEL,
+          contents: prompt,
+          config: { temperature: 0 },
+        });
+        for await (const chunk of response) {
+          if (chunk.text) {
+            atLineBoundary = chunk.text.endsWith("\n");
+            controller.enqueue(encoder.encode(chunk.text));
           }
-          controller.close();
-        } catch (error) {
-          controller.error(error);
         }
-      },
-    });
+        controller.close();
+      } catch (error) {
+        controller.error(error);
+      } finally {
+        clearInterval(heartbeat);
+      }
+    },
+  });
 
-    return new Response(stream, {
-      headers: { "Content-Type": "application/x-ndjson" },
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown error calling the Gemma API.";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  return new Response(stream, {
+    headers: { "Content-Type": "application/x-ndjson" },
+  });
 }

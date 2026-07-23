@@ -10,9 +10,9 @@ const RETRY_DELAYS_MS = [2000, 6000, 15000];
 // generateJson's regeneration loop wraps generateWithRetry's own retry loop,
 // so a request could otherwise stack up to 2 x 4 = 8 real Gemma calls under
 // sustained 429s. Cap total wall-clock time per request just under the
-// routes' maxDuration=180 so a rate-limited request fails fast with a clear
+// routes' maxDuration=300 so a rate-limited request fails fast with a clear
 // error instead of hanging for 15-20 minutes.
-const TOTAL_BUDGET_MS = 170_000;
+const TOTAL_BUDGET_MS = 290_000;
 
 /** Strips markdown code fences the model sometimes adds despite being told not to. */
 export function stripFences(raw: string): string {

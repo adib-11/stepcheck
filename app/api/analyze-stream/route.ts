@@ -53,34 +53,42 @@ ${problemStatementLatex}
 Student's confirmed steps (LaTeX), 0-based index per line:
 ${confirmedSteps.map((step: string, i: number) => `${i}: ${step}`).join("\n")}`;
 
-  try {
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContentStream({
-      model: MODEL,
-      contents: prompt,
-      config: { temperature: 0 },
-    });
-
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of response) {
-            if (chunk.text) controller.enqueue(encoder.encode(chunk.text));
+  const ai = new GoogleGenAI({ apiKey });
+  const encoder = new TextEncoder();
+  // The Gemma call starts INSIDE the stream so headers go out immediately,
+  // and blank-line heartbeats keep the connection alive through Gemma's
+  // first-token wait (observed at 100s+ under load — long enough for Safari
+  // and proxies to kill a silent request). The client's NDJSON parser skips
+  // blank lines, but a heartbeat must never land mid-line, so it only fires
+  // at a line boundary (nothing sent yet, or the last byte was a newline).
+  const stream = new ReadableStream({
+    async start(controller) {
+      let atLineBoundary = true;
+      const heartbeat = setInterval(() => {
+        if (atLineBoundary) controller.enqueue(encoder.encode("\n"));
+      }, 10_000);
+      try {
+        const response = await ai.models.generateContentStream({
+          model: MODEL,
+          contents: prompt,
+          config: { temperature: 0 },
+        });
+        for await (const chunk of response) {
+          if (chunk.text) {
+            atLineBoundary = chunk.text.endsWith("\n");
+            controller.enqueue(encoder.encode(chunk.text));
           }
-          controller.close();
-        } catch (error) {
-          controller.error(error);
         }
-      },
-    });
+        controller.close();
+      } catch (error) {
+        controller.error(error);
+      } finally {
+        clearInterval(heartbeat);
+      }
+    },
+  });
 
-    return new Response(stream, {
-      headers: { "Content-Type": "application/x-ndjson" },
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown error calling the Gemma API.";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  return new Response(stream, {
+    headers: { "Content-Type": "application/x-ndjson" },
+  });
 }
