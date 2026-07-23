@@ -94,6 +94,16 @@ function transcriptionLooksShaky(steps: string[]): boolean {
 
 const STAGE_LABELS = ["Photo", "Confirm", "Result"];
 
+// A stream attempt that fails after this long was almost certainly cut off
+// by the server's maxDuration=300 (Gemma too slow), not malformed output —
+// the classic non-streaming fallback would hit the same 300s wall with
+// nothing streamed, so skip it and show the error card immediately instead
+// of doubling a hopeless wait.
+const STREAM_GIVE_UP_MS = 240_000;
+
+const SLOW_MODEL_MESSAGE =
+  "Gemma is responding unusually slowly right now, and the check ran out of time. This is on the model's side, not yours — try again in a few minutes.";
+
 type Screen = "landing" | "upload" | "confirm" | "results";
 
 export default function Home() {
@@ -325,6 +335,9 @@ export default function Home() {
             misconceptionSummary: streamed.misconceptionSummary,
             misconceptionTag: streamed.misconceptionTag ?? null,
           });
+        } else if (Date.now() - startedAt > STREAM_GIVE_UP_MS) {
+          setResultError({ message: SLOW_MODEL_MESSAGE });
+          announceDone("StepCheck hit a problem — tap to retry.");
         } else {
           setLiveFeedback([]);
           const res = await fetch("/api/analyze", {
@@ -370,6 +383,9 @@ export default function Home() {
             outcome: "solved",
             misconceptionSummary: null,
           });
+        } else if (Date.now() - startedAt > STREAM_GIVE_UP_MS) {
+          setResultError({ message: SLOW_MODEL_MESSAGE });
+          announceDone("StepCheck hit a problem — tap to retry.");
         } else {
           setLiveSolveSteps([]);
           const res = await fetch("/api/solve", {
