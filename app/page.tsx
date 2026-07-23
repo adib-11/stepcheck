@@ -707,7 +707,24 @@ export default function Home() {
           {header}
 
           {transcribeResult && (
-            <section className="flex flex-col gap-5 rounded-lg border-2 border-ink bg-white shadow-brut p-6">
+            <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start">
+              {/* Photo column — sticky on desktop so it stays visible while
+                  the student scrolls the step fields against it. */}
+              {image && (
+                <div className="lg:sticky lg:top-6">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={image.previewUrl}
+                    alt="Your uploaded photo"
+                    className="w-full rounded-lg border-2 border-ink bg-white object-contain shadow-brut"
+                  />
+                  <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-muted">
+                    Your photo — compare each field against it
+                  </p>
+                </div>
+              )}
+
+            <section className={`flex flex-col gap-5 rounded-lg border-2 border-ink bg-white shadow-brut p-6 ${image ? "" : "lg:col-span-2 lg:mx-auto lg:w-full lg:max-w-3xl"}`}>
               <div>
                 {queue.length > 1 && (
                   <span className="mb-2 inline-block rounded-full border-2 border-ink bg-brand-soft/40 px-3 py-1 text-xs font-semibold text-ink">
@@ -725,15 +742,6 @@ export default function Home() {
                     : "Enter the problem statement, and optionally your own working — Gemma will mark it step by step, or solve it if you leave the steps out."}
                 </p>
               </div>
-
-              {image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={image.previewUrl}
-                  alt="Your uploaded photo"
-                  className="max-h-40 self-start rounded-md border border-hairline object-contain"
-                />
-              )}
 
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-ink">What does the problem ask?</label>
@@ -827,6 +835,7 @@ export default function Home() {
                 />
               )}
             </section>
+            </div>
           )}
         </main>
       </Screen>
