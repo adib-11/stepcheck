@@ -41,10 +41,6 @@ const config: Config = {
   				error: '#e5484d',          // cross — warm red, fits mint + dark teal
   				flag: '#c37d0d',           // low-confidence flag — unchanged
   			},
-  			hero: {
-  				from: '#87a8c8',           // dead after Task 4 — deleted there
-  				to: '#f5e9d8',
-  			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

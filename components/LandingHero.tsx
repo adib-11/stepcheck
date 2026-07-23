@@ -32,17 +32,14 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
   const cycle = useDemoCycle(DEMO_STEPS.length, 2600);
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-16 text-center sm:px-6">
-      {/* Atmospheric sky band — the one gradient moment in the app
-          (hero-band-sky, DESIGN.md). Fades into the white canvas. */}
-      <div
-        aria-hidden
-        className="absolute inset-x-0 top-0 -z-10 h-[65vh] bg-gradient-to-b from-hero-from/60 via-hero-to/50 to-white"
-      />
-
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-surface px-4 py-16 text-center sm:px-6">
       <div className="flex w-full max-w-2xl flex-col items-center gap-10">
         <div className="flex flex-col items-center gap-4">
-          <h1 className="font-display text-5xl font-semibold tracking-[-0.02em] text-ink sm:text-6xl">
+          {/* Kicker pill, FlyRank hero-style: mint-washed, ink outline. */}
+          <span className="rounded-full border-2 border-ink bg-brand-soft/40 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink">
+            Step-by-step marking
+          </span>
+          <h1 className="font-display text-5xl font-bold tracking-[-0.02em] text-ink sm:text-6xl">
             StepCheck
           </h1>
           <p className="max-w-md text-balance text-lg text-ink-muted">
@@ -51,10 +48,11 @@ export default function LandingHero({ onStart }: { onStart: () => void }) {
           </p>
         </div>
 
-        {/* Demo card styled as the hero product mockup: white card, soft
-            hairline border, deep diffuse drop shadow (hero-product-mockup). */}
+        {/* Demo card as the neobrutalist hero object: white card, 2px ink
+            border, hard mint offset shadow (FlyRank's highlighted-card
+            treatment). */}
         <div
-          className="flex w-full max-w-sm flex-col gap-3 rounded-lg border border-hairline-soft bg-white p-6 text-left shadow-[0_24px_48px_-8px_rgba(0,0,0,0.12)]"
+          className="flex w-full max-w-sm flex-col gap-3 rounded-lg border-2 border-ink bg-white p-6 text-left shadow-brut-brand"
           aria-hidden
         >
           {DEMO_STEPS.map((step, i) => (
