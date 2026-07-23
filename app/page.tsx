@@ -571,7 +571,7 @@ export default function Home() {
             type="button"
             onClick={goBack}
             aria-label="Go back"
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-hairline bg-white text-ink-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-ink bg-white text-ink shadow-brut-sm transition-[transform,box-shadow,background-color] duration-200 ease-out hover:bg-surface active:translate-x-0.5 active:translate-y-0.5 active:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden fill="none">
               <path
@@ -603,8 +603,8 @@ export default function Home() {
             key={label}
             className={
               i + 1 <= stage
-                ? "rounded-full bg-ink px-3 py-1 text-xs font-medium text-white"
-                : "rounded-full border border-hairline bg-white px-3 py-1 text-xs font-medium text-ink-muted"
+                ? "rounded-lg border-2 border-ink bg-ink px-3 py-1 text-xs font-semibold text-white"
+                : "rounded-lg border-2 border-ink bg-white px-3 py-1 text-xs font-semibold text-ink-muted"
             }
           >
             {i + 1}. {label}
@@ -636,7 +636,7 @@ export default function Home() {
         <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
           {header}
 
-          <section className="flex flex-col gap-4 rounded-lg border border-hairline bg-white p-6">
+          <section className="flex flex-col gap-4 rounded-lg border-2 border-ink bg-white shadow-brut p-6">
             <label className="text-sm font-medium text-ink">
               Page 1 — Photo of the problem (and your working, if you have any)
             </label>
@@ -688,10 +688,10 @@ export default function Home() {
           {header}
 
           {transcribeResult && (
-            <section className="flex flex-col gap-5 rounded-lg border border-hairline bg-white p-6">
+            <section className="flex flex-col gap-5 rounded-lg border-2 border-ink bg-white shadow-brut p-6">
               <div>
                 {queue.length > 1 && (
-                  <span className="mb-2 inline-block rounded-full border border-hairline bg-white px-3 py-1 text-xs font-medium text-ink-muted">
+                  <span className="mb-2 inline-block rounded-full border-2 border-ink bg-brand-soft/40 px-3 py-1 text-xs font-semibold text-ink">
                     Problem {queueIndex + 1} of {queue.length}
                   </span>
                 )}
@@ -808,7 +808,7 @@ export default function Home() {
             so this must not look like it's stuck. Only hidden once a
             result or error has actually arrived (isWorking false). */}
         {(isWorking || isHinting) && !resultError && !solved && !analysis && !hints && (
-          <section className="flex flex-col items-center gap-4 rounded-lg border border-hairline bg-white p-8 text-center">
+          <section className="flex flex-col items-center gap-4 rounded-lg border-2 border-ink bg-white shadow-brut p-8 text-center">
             <div className="flex gap-2" aria-hidden>
               {[0, 1, 2].map((i) => (
                 <span
@@ -858,7 +858,7 @@ export default function Home() {
             so retrying re-runs the same call only — no re-upload or
             re-transcription required. */}
         {resultError && (
-          <section className="flex flex-col gap-2 rounded-lg border border-mark-error/40 bg-mark-error/5 p-6">
+          <section className="flex flex-col gap-2 rounded-lg border-2 border-mark-error bg-mark-error/5 shadow-brut p-6">
             <p className="text-sm font-medium text-mark-error">
               {confirmed?.steps ? "Couldn't finish checking your solution" : "Couldn't finish solving this"}
             </p>
@@ -894,7 +894,7 @@ export default function Home() {
             is a plain worked-solution walkthrough, distinct from the
             marking-rail outcomes below. */}
         {solved && (
-          <section className="flex flex-col gap-4 rounded-lg border border-hairline bg-white p-6">
+          <section className="flex flex-col gap-4 rounded-lg border-2 border-ink bg-white shadow-brut p-6">
             <div className="rounded-md bg-surface p-5">
               <p className="font-display text-xl font-semibold tracking-tight text-ink">
                 Here&apos;s how to solve this
@@ -939,7 +939,7 @@ export default function Home() {
         )}
 
         {hints && (
-          <section className="flex flex-col gap-4 rounded-lg border border-hairline bg-white p-6">
+          <section className="flex flex-col gap-4 rounded-lg border-2 border-ink bg-white shadow-brut p-6">
             <div className="rounded-md bg-surface p-5">
               <p className="font-display text-xl font-semibold tracking-tight text-ink">
                 Nudges, not answers
@@ -984,7 +984,7 @@ export default function Home() {
             + the student's own confirmed LaTeX), rather than a separate
             feedback list rendered below a step list. */}
         {analysis && confirmed?.steps && (
-          <section className="flex flex-col gap-4 rounded-lg border border-hairline bg-white p-6">
+          <section className="flex flex-col gap-4 rounded-lg border-2 border-ink bg-white shadow-brut p-6">
             <div
               className={`rounded-md p-5 font-display text-xl font-semibold tracking-tight ${
                 analysis.isCorrect
@@ -1007,7 +1007,8 @@ export default function Home() {
                 return (
                   <div
                     key={i}
-                    className="flex gap-3 rounded-md border border-hairline-soft bg-surface-soft p-4 text-sm"
+                    className="screen-transition flex gap-3 rounded-md border border-hairline-soft bg-surface-soft p-4 text-sm"
+                    style={{ animationDelay: `${i * 80}ms` }}
                   >
                     <div className="flex w-5 flex-shrink-0 justify-center border-r border-hairline pr-3">
                       {fb && <StepMark status={fb.status} delayMs={i * 120} />}
@@ -1028,7 +1029,7 @@ export default function Home() {
             </div>
 
             {!analysis.isCorrect && (
-              <div className="flex flex-col gap-3 rounded-md border border-mark-flag/40 bg-mark-flag/5 p-5 text-sm">
+              <div className="flex flex-col gap-3 rounded-md border-2 border-mark-flag bg-mark-flag/5 p-5 text-sm">
                 <div>
                   <p className="font-medium text-ink">Misconception</p>
                   <p className="mt-1 text-ink-muted">{analysis.misconceptionSummary}</p>
@@ -1087,7 +1088,7 @@ export default function Home() {
                       onChange={(e) => setExplainText(e.target.value)}
                       rows={2}
                       placeholder="It works because…"
-                      className="mt-2 w-full rounded-md border border-hairline bg-white px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="mt-2 w-full rounded-md border-2 border-ink bg-white px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     />
                     <Button
                       variant="outline"
@@ -1168,7 +1169,7 @@ export default function Home() {
         )}
 
         {(analysis || solved) && (
-          <section className="flex flex-col gap-3 rounded-lg border border-hairline bg-white p-6 text-sm">
+          <section className="flex flex-col gap-3 rounded-lg border-2 border-ink bg-white shadow-brut p-6 text-sm">
             <div>
               <p className="font-medium text-ink">Ask a follow-up</p>
               <p className="mt-1 text-ink-muted">
@@ -1202,7 +1203,7 @@ export default function Home() {
                   if (e.key === "Enter") askFollowUp();
                 }}
                 placeholder="Why is that step wrong?"
-                className="w-full rounded-md border border-hairline bg-white px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full rounded-md border-2 border-ink bg-white px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
               <Button size="sm" onClick={askFollowUp} disabled={isAsking || !chatInput.trim()}>
                 {isAsking ? "Thinking…" : "Ask"}
