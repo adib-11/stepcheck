@@ -23,7 +23,7 @@ const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 const MAX_DIMENSION = 1600;
 
 /** Reads a File into a data URL, downscaling to JPEG if it's too large. */
-function readFile(file: File): Promise<UploadedImage> {
+export function readFile(file: File): Promise<UploadedImage> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Could not read the file."));
@@ -59,6 +59,7 @@ export default function ImageUpload({ onChange }: ImageUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
@@ -124,6 +125,24 @@ export default function ImageUpload({ onChange }: ImageUploadProps) {
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png"
+        className="hidden"
+        onChange={(e) => void handleFile(e.target.files?.[0])}
+      />
+      {/* Mobile-only direct-to-camera path. capture forces the camera app,
+          so it must be a SECOND input — the main picker keeps gallery
+          access. Hidden on sm+ where there's usually no camera worth using. */}
+      <button
+        type="button"
+        onClick={() => cameraRef.current?.click()}
+        className="mt-2 w-full rounded-full border border-hairline bg-white px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface sm:hidden"
+      >
+        Take a photo
+      </button>
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/jpeg,image/png"
+        capture="environment"
         className="hidden"
         onChange={(e) => void handleFile(e.target.files?.[0])}
       />
