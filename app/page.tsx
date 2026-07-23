@@ -9,6 +9,8 @@ import LoadingNote from "@/components/LoadingNote";
 import StagedStatus from "@/components/StagedStatus";
 import Screen from "@/components/Screen";
 import LandingHero from "@/components/LandingHero";
+import HistoryList from "@/components/HistoryList";
+import { saveHistoryEntry } from "@/lib/history";
 
 // MathLive touches the DOM (custom elements) on import, so the input must
 // only ever be rendered on the client.
@@ -179,6 +181,12 @@ export default function Home() {
           return;
         }
         setAnalysis(data);
+        saveHistoryEntry({
+          at: Date.now(),
+          problemLatex: problemToUse,
+          outcome: data.isCorrect ? "correct" : "incorrect",
+          misconceptionSummary: data.misconceptionSummary,
+        });
       } else {
         const res = await fetch("/api/solve", {
           method: "POST",
@@ -191,6 +199,12 @@ export default function Home() {
           return;
         }
         setSolved(data);
+        saveHistoryEntry({
+          at: Date.now(),
+          problemLatex: problemToUse,
+          outcome: "solved",
+          misconceptionSummary: null,
+        });
       }
     } catch {
       setResultError({ message: "Network error: could not reach the API." });
@@ -314,6 +328,7 @@ export default function Home() {
     return (
       <Screen screenKey="landing">
         <LandingHero onStart={() => setScreen("upload")} />
+        <HistoryList />
       </Screen>
     );
   }
