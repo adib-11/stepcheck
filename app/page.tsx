@@ -36,6 +36,11 @@ interface AnalysisResult {
   correctContinuationExplanation: string | null;
 }
 
+interface PracticeProblem {
+  problemLatex: string;
+  hint: string;
+}
+
 interface SolveStep {
   stepIndex: number;
   workLatex: string;
@@ -102,6 +107,10 @@ export default function Home() {
   // untouched, fall back to the step's confirmed LaTeX.
   const [fixLatex, setFixLatex] = useState<string | null>(null);
 
+  const [practice, setPractice] = useState<PracticeProblem[] | null>(null);
+  const [isPracticeLoading, setIsPracticeLoading] = useState(false);
+  const [practiceError, setPracticeError] = useState<string | null>(null);
+
   const stage = analysis || solved || resultError ? 3 : transcribeResult ? 2 : 1;
 
   async function transcribe() {
@@ -150,6 +159,8 @@ export default function Home() {
     setAnalysis(null);
     setSolved(null);
     setFixLatex(null);
+    setPractice(null);
+    setPracticeError(null);
     setScreen("results");
 
     try {
@@ -188,6 +199,32 @@ export default function Home() {
     }
   }
 
+  async function fetchPractice() {
+    if (!confirmed || !analysis?.misconceptionSummary) return;
+    setIsPracticeLoading(true);
+    setPracticeError(null);
+    try {
+      const res = await fetch("/api/practice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problemStatementLatex: confirmed.problem,
+          misconceptionSummary: analysis.misconceptionSummary,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPracticeError(data.error ?? "Couldn't generate practice problems.");
+        return;
+      }
+      setPractice(data.problems);
+    } catch {
+      setPracticeError("Network error: could not reach the practice API.");
+    } finally {
+      setIsPracticeLoading(false);
+    }
+  }
+
   function updateStep(index: number, latex: string) {
     setSteps((prev) => {
       if (!prev) return prev;
@@ -208,6 +245,8 @@ export default function Home() {
     setSolved(null);
     setResultError(null);
     setFixLatex(null);
+    setPractice(null);
+    setPracticeError(null);
     setScreen("landing");
   }
 
@@ -611,6 +650,48 @@ export default function Home() {
                     Re-check my fix
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {!analysis.isCorrect && analysis.misconceptionSummary && (
+              <div className="flex flex-col gap-3 rounded-md border border-hairline-soft bg-surface-soft p-5 text-sm">
+                <div>
+                  <p className="font-medium text-ink">Practice this</p>
+                  <p className="mt-1 text-ink-muted">
+                    Fresh problems that drill exactly the skill this slip came
+                    from. Work them on paper, then photograph your attempt to
+                    get it checked.
+                  </p>
+                </div>
+
+                {!practice && (
+                  <Button
+                    size="sm"
+                    className="self-start"
+                    onClick={fetchPractice}
+                    disabled={isPracticeLoading}
+                  >
+                    {isPracticeLoading ? "Writing problems…" : "Give me practice problems"}
+                  </Button>
+                )}
+                {isPracticeLoading && (
+                  <LoadingNote label="Gemma is writing problems aimed at this misconception." />
+                )}
+                {practiceError && <p className="text-mark-error">{practiceError}</p>}
+
+                {practice &&
+                  practice.map((p, i) => (
+                    <div key={i} className="rounded-md border border-hairline-soft bg-white p-4">
+                      <p className="font-medium text-ink">Problem {i + 1}</p>
+                      <div className="mt-1 rounded-md border border-hairline-soft bg-surface px-3 py-2">
+                        <MathView latex={p.problemLatex} />
+                      </div>
+                      <details className="mt-2 text-ink-muted">
+                        <summary className="cursor-pointer font-medium text-ink">Hint</summary>
+                        <p className="mt-1">{p.hint}</p>
+                      </details>
+                    </div>
+                  ))}
               </div>
             )}
 
