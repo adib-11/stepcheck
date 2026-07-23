@@ -15,36 +15,35 @@ const config: Config = {
   			mono: ['var(--font-geist-mono)', 'monospace'],
   		},
   		colors: {
-  			// Mintlify system (see DESIGN.md). Token names kept from the old
-  			// system where components already reference them (paper, ink,
-  			// ink-muted, mark-*) so existing classes recolor in place.
-  			paper: '#ffffff',            // {colors.canvas}
+  			// Neobrutalism × FlyRank palette (see DESIGN.md). Token names kept
+  			// from the previous system so existing classes recolor in place.
+  			paper: '#ffffff',            // card fill
   			surface: {
-  				DEFAULT: '#f7f7f7',        // {colors.surface}
-  				soft: '#fafafa',           // {colors.surface-soft}
+  				DEFAULT: '#f8f8f8',        // FlyRank whitesmoke canvas
+  				soft: '#fcfcfc',
   			},
   			hairline: {
-  				DEFAULT: '#e5e5e5',        // {colors.hairline}
-  				soft: '#ededed',           // {colors.hairline-soft}
+  				DEFAULT: '#e5e5e5',        // inner dividers ONLY — outer borders are ink
+  				soft: '#ededed',
   			},
-  			charcoal: '#1c1c1e',         // {colors.charcoal} — pressed primary
+  			charcoal: '#0c1b1b',         // hover state for ink-filled buttons
   			ink: {
-  				DEFAULT: '#0a0a0a',        // {colors.ink}
-  				muted: '#5a5a5c',          // {colors.steel}
+  				DEFAULT: '#001820',        // FlyRank dark teal — text, borders, shadows
+  				muted: '#425153',          // FlyRank slate
   			},
   			brand: {
-  				DEFAULT: '#00d4a4',        // {colors.brand-green} — accent only
-  				deep: '#00b48a',           // {colors.brand-green-deep}
-  				soft: '#7cebcb',           // {colors.brand-green-soft}
+  				DEFAULT: '#50e098',        // FlyRank mint — primary accent
+  				deep: '#2fbf7b',           // hover darken
+  				soft: '#a9efcb',           // tints/washes
   			},
   			mark: {
-  				correct: '#1ba673',        // {colors.brand-annotate}
-  				error: '#d45656',          // {colors.brand-error}
-  				flag: '#c37d0d',           // {colors.brand-warn}
+  				correct: '#1ba673',        // tick — unchanged, already mint-family
+  				error: '#e5484d',          // cross — warm red, fits mint + dark teal
+  				flag: '#c37d0d',           // low-confidence flag — unchanged
   			},
   			hero: {
-  				from: '#87a8c8',           // {colors.hero-sky-from}
-  				to: '#f5e9d8',             // {colors.hero-sky-to}
+  				from: '#87a8c8',           // dead after Task 4 — deleted there
+  				to: '#f5e9d8',
   			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
@@ -91,6 +90,12 @@ const config: Config = {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 4px)',
   			sm: 'calc(var(--radius) - 6px)'
+  		},
+  		boxShadow: {
+  			// Neobrutalist hard offset shadows — no blur, ink or mint, never #000
+  			brut: '4px 4px 0 0 #001820',
+  			'brut-sm': '2px 2px 0 0 #001820',
+  			'brut-brand': '6px 6px 0 0 #50e098',
   		}
   	}
   },

@@ -12,38 +12,37 @@
 
 @layer base {
   /*
-   * Mintlify token system (see DESIGN.md). The shadcn CSS-variable names
-   * are kept so ui/button.tsx variants and Tailwind classes (bg-background,
-   * text-muted-foreground, border-border, etc.) work unchanged, but the
-   * values now point at the Mintlify palette: white canvas, near-black ink,
-   * hairline borders, mint-green accent.
+   * Neobrutalism × FlyRank token system (see DESIGN.md). shadcn variable
+   * names kept so Tailwind classes work unchanged; values point at the
+   * FlyRank palette: white cards on whitesmoke canvas, dark-teal ink,
+   * mint accent, hard offset shadows.
    */
   :root {
-    --background: 0 0% 100%; /* canvas #ffffff */
-    --foreground: 0 0% 4%; /* ink #0a0a0a */
+    --background: 0 0% 100%; /* card/canvas white */
+    --foreground: 196 100% 6%; /* ink #001820 */
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 4%;
+    --card-foreground: 196 100% 6%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 4%;
-    --primary: 0 0% 4%; /* black pill CTA */
+    --popover-foreground: 196 100% 6%;
+    --primary: 196 100% 6%; /* ink-filled CTA */
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 97%; /* surface #f7f7f7 */
-    --secondary-foreground: 0 0% 4%;
-    --muted: 0 0% 97%; /* surface */
-    --muted-foreground: 240 1% 36%; /* steel #5a5a5c */
-    --accent: 166 100% 42%; /* brand mint #00d4a4 */
-    --accent-foreground: 0 0% 4%;
-    --destructive: 0 59% 58%; /* brand-error #d45656 */
+    --secondary: 0 0% 97%; /* surface #f8f8f8 */
+    --secondary-foreground: 196 100% 6%;
+    --muted: 0 0% 97%;
+    --muted-foreground: 187 11% 29%; /* slate #425153 */
+    --accent: 150 70% 60%; /* brand mint #50e098 */
+    --accent-foreground: 196 100% 6%;
+    --destructive: 358 75% 59%; /* red #e5484d */
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 90%; /* hairline #e5e5e5 */
-    --input: 0 0% 90%;
-    --ring: 166 100% 42%; /* focus = brand mint, per text-input-focused */
+    --border: 0 0% 90%; /* hairline — inner dividers only */
+    --input: 196 100% 6%; /* inputs carry ink borders */
+    --ring: 150 70% 60%; /* focus ring = brand mint */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.75rem; /* 12px — {rounded.lg}, the Mintlify card radius */
+    --radius: 0.5rem; /* 8px — neobrutalist base radius (rounded-lg) */
   }
 }
 
@@ -72,8 +71,8 @@ math-field:focus-within {
 
 /* Signature moment: the marking-rail tick/cross for each step draws in
    one at a time when analysis results arrive (see StepMark in page.tsx).
-   This is the single orchestrated transition in the app; no other
-   hover/load animation is added anywhere else. */
+   This is the signature transition; general entry/hover motion follows
+   the design.md rules in DESIGN.md §5. */
 @keyframes mark-in {
   from {
     opacity: 0;
@@ -85,13 +84,14 @@ math-field:focus-within {
   }
 }
 
-/* The one screen-to-screen transition pattern (landing -> upload ->
-   confirm -> results, and back). Every screen mount uses this same
-   slide+fade — no screen gets its own bespoke animation. */
+/* Entry motion (design.md): fade + translate-Y 16px → 0 over 420ms
+   ease-out. Used for screen mounts AND, via inline animationDelay in
+   80ms increments, for staggered list cascades (results steps, history
+   entries). Only transform/opacity animate. */
 @keyframes screen-in {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -100,7 +100,7 @@ math-field:focus-within {
 }
 
 .screen-transition {
-  animation: screen-in 0.32s ease-out both;
+  animation: screen-in 0.42s ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {
