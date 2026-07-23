@@ -10,6 +10,7 @@ import Screen from "@/components/Screen";
 import LandingHero from "@/components/LandingHero";
 import HistoryList from "@/components/HistoryList";
 import WaitProgress from "@/components/WaitProgress";
+import WaitReview from "@/components/WaitReview";
 import MarkedStep from "@/components/MarkedStep";
 import { saveHistoryEntry } from "@/lib/history";
 import { saveDuration } from "@/lib/durations";
@@ -1233,6 +1234,8 @@ export default function Home() {
 
         </div>
         <div className="flex min-w-0 flex-col gap-8 lg:sticky lg:top-6">
+
+        {(isWorking || isHinting) && !analysis && !solved && !hints && !resultError && <WaitReview />}
 
         {analysis && confirmed?.steps && !analysis.isCorrect && (
           <section className="flex flex-col gap-3 rounded-lg border-2 border-ink bg-white shadow-brut p-6 text-sm">
