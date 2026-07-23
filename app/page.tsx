@@ -848,6 +848,9 @@ export default function Home() {
       <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6">
         {header}
 
+        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-8">
+        <div className="flex min-w-0 flex-col gap-8">
+
         {/* Loading state: rendered immediately upon entering this screen
             (isWorking becomes true and screen flips to "results" in the
             same tick, in runResult) and stays up for the entire in-flight
@@ -1075,133 +1078,6 @@ export default function Home() {
               })}
             </div>
 
-            {!analysis.isCorrect && (
-              <div className="flex flex-col gap-3 rounded-md border-2 border-mark-flag bg-mark-flag/5 p-5 text-sm">
-                <div>
-                  <p className="font-medium text-ink">Misconception</p>
-                  <p className="mt-1 text-ink-muted">{analysis.misconceptionSummary}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-ink">Correct continuation</p>
-                  <div className="mt-1 rounded-md border border-hairline-soft bg-white px-3 py-2">
-                    {analysis.correctContinuation && (
-                      <MathView latex={analysis.correctContinuation} />
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <p className="font-medium text-ink">Why</p>
-                  <p className="mt-1 text-ink-muted">
-                    {analysis.correctContinuationExplanation}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-medium text-ink">Fix it and re-check</p>
-                  <p className="mt-1 text-ink-muted">
-                    Edit step {(analysis.firstErrorStepIndex ?? 0) + 1} below and
-                    Gemma will mark your whole solution again.
-                  </p>
-                  <div className="mt-2 rounded-md border border-hairline-soft bg-white px-3 py-2">
-                    <MathInput
-                      key={`fix-${analysis.firstErrorStepIndex}`}
-                      defaultValue={confirmed.steps[analysis.firstErrorStepIndex ?? 0]}
-                      onChange={setFixLatex}
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    className="mt-2"
-                    disabled={isWorking}
-                    onClick={() => {
-                      const idx = analysis.firstErrorStepIndex ?? 0;
-                      const next = [...confirmed.steps!];
-                      next[idx] = fixLatex ?? next[idx];
-                      // Keep the confirm screen's editable copies in sync so
-                      // goBack() shows the fixed step, not the stale one.
-                      setSteps(next);
-                      runResult(confirmed.text, confirmed.latex, next);
-                    }}
-                  >
-                    Re-check my fix
-                  </Button>
-                  <div className="mt-3">
-                    <p className="font-medium text-ink">Explain your fix (optional)</p>
-                    <p className="mt-1 text-ink-muted">
-                      Say why your corrected step works — Gemma checks the
-                      reasoning, not just the algebra.
-                    </p>
-                    <textarea
-                      value={explainText}
-                      onChange={(e) => setExplainText(e.target.value)}
-                      rows={2}
-                      placeholder="It works because…"
-                      className="mt-2 w-full rounded-md border-2 border-ink bg-white px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      disabled={isExplaining || !explainText.trim()}
-                      onClick={checkExplanation}
-                    >
-                      {isExplaining ? "Checking…" : "Check my reasoning"}
-                    </Button>
-                    {explainFeedback && (
-                      <p
-                        className={`mt-2 ${
-                          explainFeedback.isSound ? "text-mark-correct" : "text-mark-flag"
-                        }`}
-                      >
-                        {explainFeedback.feedback}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!analysis.isCorrect && analysis.misconceptionSummary && (
-              <div className="flex flex-col gap-3 rounded-md border border-hairline-soft bg-surface-soft p-5 text-sm">
-                <div>
-                  <p className="font-medium text-ink">Practice this</p>
-                  <p className="mt-1 text-ink-muted">
-                    Fresh problems that drill exactly the skill this slip came
-                    from. Work them on paper, then photograph your attempt to
-                    get it checked.
-                  </p>
-                </div>
-
-                {!practice && (
-                  <Button
-                    size="sm"
-                    className="self-start"
-                    onClick={fetchPractice}
-                    disabled={isPracticeLoading}
-                  >
-                    {isPracticeLoading ? "Writing problems…" : "Give me practice problems"}
-                  </Button>
-                )}
-                {isPracticeLoading && (
-                  <LoadingNote label="Gemma is writing problems aimed at this misconception." />
-                )}
-                {practiceError && <p className="text-mark-error">{practiceError}</p>}
-
-                {practice &&
-                  practice.map((p, i) => (
-                    <div key={i} className="rounded-md border border-hairline-soft bg-white p-4">
-                      <p className="font-medium text-ink">Problem {i + 1}</p>
-                      <div className="mt-1 rounded-md border border-hairline-soft bg-surface px-3 py-2">
-                        <MathView latex={p.problemLatex} />
-                      </div>
-                      <details className="mt-2 text-ink-muted">
-                        <summary className="cursor-pointer font-medium text-ink">Hint</summary>
-                        <p className="mt-1">{p.hint}</p>
-                      </details>
-                    </div>
-                  ))}
-              </div>
-            )}
-
             <div className="flex flex-wrap gap-2">
               {queueIndex < queue.length - 1 && (
                 <Button size="sm" onClick={() => loadQueueItem(queue, queueIndex + 1)}>
@@ -1212,6 +1088,136 @@ export default function Home() {
                 Check another problem
               </Button>
             </div>
+          </section>
+        )}
+
+        </div>
+        <div className="flex min-w-0 flex-col gap-8 lg:sticky lg:top-6">
+
+        {analysis && confirmed?.steps && !analysis.isCorrect && (
+          <section className="flex flex-col gap-3 rounded-lg border-2 border-ink bg-white shadow-brut p-6 text-sm">
+            <div>
+              <p className="font-medium text-ink">Misconception</p>
+              <p className="mt-1 text-ink-muted">{analysis.misconceptionSummary}</p>
+            </div>
+            <div>
+              <p className="font-medium text-ink">Correct continuation</p>
+              <div className="mt-1 rounded-md border border-hairline-soft bg-white px-3 py-2">
+                {analysis.correctContinuation && (
+                  <MathView latex={analysis.correctContinuation} />
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="font-medium text-ink">Why</p>
+              <p className="mt-1 text-ink-muted">
+                {analysis.correctContinuationExplanation}
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-ink">Fix it and re-check</p>
+              <p className="mt-1 text-ink-muted">
+                Edit step {(analysis.firstErrorStepIndex ?? 0) + 1} below and
+                Gemma will mark your whole solution again.
+              </p>
+              <div className="mt-2 rounded-md border border-hairline-soft bg-white px-3 py-2">
+                <MathInput
+                  key={`fix-${analysis.firstErrorStepIndex}`}
+                  defaultValue={confirmed.steps[analysis.firstErrorStepIndex ?? 0]}
+                  onChange={setFixLatex}
+                />
+              </div>
+              <Button
+                size="sm"
+                className="mt-2"
+                disabled={isWorking}
+                onClick={() => {
+                  const idx = analysis.firstErrorStepIndex ?? 0;
+                  const next = [...confirmed.steps!];
+                  next[idx] = fixLatex ?? next[idx];
+                  // Keep the confirm screen's editable copies in sync so
+                  // goBack() shows the fixed step, not the stale one.
+                  setSteps(next);
+                  runResult(confirmed.text, confirmed.latex, next);
+                }}
+              >
+                Re-check my fix
+              </Button>
+              <div className="mt-3">
+                <p className="font-medium text-ink">Explain your fix (optional)</p>
+                <p className="mt-1 text-ink-muted">
+                  Say why your corrected step works — Gemma checks the
+                  reasoning, not just the algebra.
+                </p>
+                <textarea
+                  value={explainText}
+                  onChange={(e) => setExplainText(e.target.value)}
+                  rows={2}
+                  placeholder="It works because…"
+                  className="mt-2 w-full rounded-md border-2 border-ink bg-white px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  disabled={isExplaining || !explainText.trim()}
+                  onClick={checkExplanation}
+                >
+                  {isExplaining ? "Checking…" : "Check my reasoning"}
+                </Button>
+                {explainFeedback && (
+                  <p
+                    className={`mt-2 ${
+                      explainFeedback.isSound ? "text-mark-correct" : "text-mark-flag"
+                    }`}
+                  >
+                    {explainFeedback.feedback}
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {analysis && confirmed?.steps && !analysis.isCorrect && analysis.misconceptionSummary && (
+          <section className="flex flex-col gap-3 rounded-lg border-2 border-ink bg-white shadow-brut p-6 text-sm">
+            <div>
+              <p className="font-medium text-ink">Practice this</p>
+              <p className="mt-1 text-ink-muted">
+                Fresh problems that drill exactly the skill this slip came
+                from. Work them on paper, then photograph your attempt to
+                get it checked.
+              </p>
+            </div>
+
+            {!practice && (
+              <Button
+                size="sm"
+                className="self-start"
+                onClick={fetchPractice}
+                disabled={isPracticeLoading}
+              >
+                {isPracticeLoading ? "Writing problems…" : "Give me practice problems"}
+              </Button>
+            )}
+            {isPracticeLoading && (
+              <LoadingNote label="Gemma is writing problems aimed at this misconception." />
+            )}
+            {practiceError && <p className="text-mark-error">{practiceError}</p>}
+
+            {practice &&
+              practice.map((p, i) => (
+                <div key={i} className="rounded-md border border-hairline-soft bg-white p-4">
+                  <p className="font-medium text-ink">Problem {i + 1}</p>
+                  <div className="mt-1 rounded-md border border-hairline-soft bg-surface px-3 py-2">
+                    <MathView latex={p.problemLatex} />
+                  </div>
+                  <details className="mt-2 text-ink-muted">
+                    <summary className="cursor-pointer font-medium text-ink">Hint</summary>
+                    <p className="mt-1">{p.hint}</p>
+                  </details>
+                </div>
+              ))}
           </section>
         )}
 
@@ -1259,6 +1265,9 @@ export default function Home() {
             {isAsking && <LoadingNote label="Gemma is thinking about your question." />}
           </section>
         )}
+
+        </div>
+        </div>
       </main>
     </Screen>
   );
