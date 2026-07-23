@@ -517,6 +517,13 @@ export default function Home() {
       <Screen screenKey="landing">
         <LandingHero onStart={() => setScreen("upload")} />
         <HistoryList />
+        <p className="pb-10 text-center text-sm text-ink-muted">
+          Teaching a class?{" "}
+          <a href="/teacher" className="underline underline-offset-4 hover:text-ink">
+            Mark a stack of photos at once
+          </a>
+          .
+        </p>
       </Screen>
     );
   }
