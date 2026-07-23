@@ -149,6 +149,10 @@ export default function Home() {
   // Solve steps that have arrived so far over the solve stream.
   const [liveSolveSteps, setLiveSolveSteps] = useState<SolveStep[]>([]);
 
+  // The student's pre-result bet on where the first slip is: a 0-based step
+  // index, "all" for "I think it's all correct", or null for no bet placed.
+  const [prediction, setPrediction] = useState<number | "all" | null>(null);
+
   const [chat, setChat] = useState<ChatTurn[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isAsking, setIsAsking] = useState(false);
@@ -214,6 +218,7 @@ export default function Home() {
     setExplainFeedback(null);
     setLiveFeedback([]);
     setLiveSolveSteps([]);
+    setPrediction(null);
     setScreen("confirm");
   }
 
@@ -258,6 +263,7 @@ export default function Home() {
     setChatError(null);
     setLiveFeedback([]);
     setLiveSolveSteps([]);
+    setPrediction(null);
     setScreen("results");
 
     const startedAt = Date.now();
@@ -642,6 +648,7 @@ export default function Home() {
     setChatError(null);
     setLiveFeedback([]);
     setLiveSolveSteps([]);
+    setPrediction(null);
     setScreen("landing");
   }
 
@@ -964,6 +971,32 @@ export default function Home() {
               kind={confirmed?.steps ? "analyze" : "solve"}
               stepCount={confirmed?.steps?.length ?? 0}
             />
+            {confirmed?.steps && prediction === null && (
+              <div className="flex w-full flex-col gap-2 rounded-md border-2 border-ink bg-brand-soft/20 p-4 text-left">
+                <p className="text-sm font-medium text-ink">
+                  While the marker works — where do you think the first slip is?
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {confirmed.steps.map((_, i) => (
+                    <Button key={i} variant="outline" size="sm" onClick={() => setPrediction(i)}>
+                      Step {i + 1}
+                    </Button>
+                  ))}
+                  <Button variant="secondary" size="sm" onClick={() => setPrediction("all")}>
+                    All correct
+                  </Button>
+                </div>
+              </div>
+            )}
+            {confirmed?.steps && prediction !== null && !analysis && (
+              <p className="w-full text-left text-sm text-ink-muted">
+                Your call:{" "}
+                <strong className="text-ink">
+                  {prediction === "all" ? "all correct" : `first slip at step ${prediction + 1}`}
+                </strong>
+                {" — let's see what the marker says."}
+              </p>
+            )}
             {confirmed?.steps && (
               <div className="flex w-full flex-col gap-3 text-left">
                 <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">
@@ -1145,6 +1178,24 @@ export default function Home() {
                 ? "Correct — every step holds up."
                 : `Not quite — first slip at step ${(analysis.firstErrorStepIndex ?? 0) + 1}.`}
             </div>
+
+            {prediction !== null && (
+              <p className="rounded-md border border-hairline-soft bg-surface-soft px-4 py-2 text-sm">
+                {(prediction === "all" ? analysis.isCorrect : analysis.firstErrorStepIndex === prediction) ? (
+                  <span className="font-medium text-mark-correct">
+                    You called it — your self-check instincts are sharp.
+                  </span>
+                ) : (
+                  <span className="text-ink-muted">
+                    You guessed{" "}
+                    {prediction === "all" ? "all correct" : `step ${(prediction as number) + 1}`}
+                    {analysis.isCorrect
+                      ? " — but every step actually holds up."
+                      : ` — the marker found the first slip at step ${(analysis.firstErrorStepIndex ?? 0) + 1}. Compare the two: that gap is worth understanding.`}
+                  </span>
+                )}
+              </p>
+            )}
 
             {/* The marked page: each confirmed step of the student's own
                 work, with its tick/cross drawn directly onto the same
