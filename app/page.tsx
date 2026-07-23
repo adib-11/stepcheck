@@ -151,6 +151,21 @@ export default function Home() {
     }
   }
 
+  // Type-it-in path: skip /api/transcribe entirely by seeding the confirm
+  // screen with an empty synthetic "no worked solution" transcription.
+  function startTyped() {
+    setImage(null);
+    setTranscribeError(null);
+    setTranscribeResult({ hasWorkedSolution: false, problemStatementLatex: "" });
+    setProblem("");
+    setSteps(null);
+    setConfirmed(null);
+    setAnalysis(null);
+    setSolved(null);
+    setResultError(null);
+    setScreen("confirm");
+  }
+
   // Branches based on the confirmed shape: no solution steps -> solve from
   // scratch; solution steps present -> existing analyze flow, unchanged.
   // `confirmed` stays in state on failure so retrying never forces a
@@ -275,6 +290,13 @@ export default function Home() {
     else if (screen === "results") setScreen("confirm");
   }
 
+  // Steps stripped of blank entries; null when nothing meaningful remains,
+  // which routes the confirm into the solve-from-scratch path.
+  const cleanedSteps = (() => {
+    const filtered = steps?.filter((s) => s.trim() !== "") ?? [];
+    return filtered.length > 0 ? filtered : null;
+  })();
+
   const header = (
     <header className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
@@ -372,6 +394,14 @@ export default function Home() {
                 </Button>
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={startTyped}
+              className="self-center text-sm text-ink-muted underline underline-offset-4 hover:text-ink"
+            >
+              No photo? Type the problem instead
+            </button>
           </section>
         </main>
       </Screen>
@@ -388,12 +418,14 @@ export default function Home() {
             <section className="flex flex-col gap-5 rounded-lg border border-hairline bg-white p-6">
               <div>
                 <h2 className="font-display text-xl font-semibold tracking-tight text-ink">
-                  Page 2 — Confirm what was read
+                  {image ? "Page 2 — Confirm what was read" : "Type your problem"}
                 </h2>
                 <p className="text-sm text-ink-muted">
-                  {steps
-                    ? "Check the problem and each step against the photo and fix anything the model got wrong."
-                    : "No worked solution was found in this photo — just confirm the problem statement, and Gemma will solve it for you."}
+                  {image
+                    ? steps
+                      ? "Check the problem and each step against the photo and fix anything the model got wrong."
+                      : "No worked solution was found in this photo — just confirm the problem statement, and Gemma will solve it for you."
+                    : "Enter the problem statement, and optionally your own working — Gemma will mark it step by step, or solve it if you leave the steps out."}
                 </p>
               </div>
 
@@ -411,7 +443,7 @@ export default function Home() {
                 <MathInput defaultValue={problem} onChange={setProblem} />
               </div>
 
-              {steps && transcriptionLooksShaky(steps) && (
+              {image && steps && transcriptionLooksShaky(steps) && (
                 <div className="rounded-md border border-mark-flag/40 bg-mark-flag/5 p-4 text-sm text-ink">
                   <p className="font-medium">Double check these steps carefully</p>
                   <p className="mt-1 text-ink-muted">
@@ -430,7 +462,28 @@ export default function Home() {
                   </div>
                 ))}
 
-              <Button onClick={() => runResult(problem, steps)} disabled={isWorking || !problem}>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSteps((prev) => [...(prev ?? []), ""])}
+                >
+                  {steps ? "Add another step" : "Add my working"}
+                </Button>
+                {steps && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setSteps((prev) => (prev && prev.length > 1 ? prev.slice(0, -1) : null))
+                    }
+                  >
+                    Remove last step
+                  </Button>
+                )}
+              </div>
+
+              <Button onClick={() => runResult(problem, cleanedSteps)} disabled={isWorking || !problem}>
                 {isWorking ? "Working\u2026" : "Confirm"}
               </Button>
               <p className="text-xs text-ink-muted">
