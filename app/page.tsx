@@ -11,6 +11,7 @@ import Screen from "@/components/Screen";
 import LandingHero from "@/components/LandingHero";
 import HistoryList from "@/components/HistoryList";
 import { saveHistoryEntry } from "@/lib/history";
+import { composeProblem } from "@/lib/problem";
 
 // MathLive touches the DOM (custom elements) on import, so the input must
 // only ever be rendered on the client.
@@ -66,8 +67,13 @@ interface ApiErrorState {
 }
 
 type TranscribeItem =
-  | { hasWorkedSolution: false; problemStatementLatex: string }
-  | { hasWorkedSolution: true; problemStatementLatex: string; solutionSteps: string[] };
+  | { hasWorkedSolution: false; problemText: string; problemLatex: string }
+  | {
+      hasWorkedSolution: true;
+      problemText: string;
+      problemLatex: string;
+      solutionSteps: string[];
+    };
 
 /**
  * Client-side low-confidence heuristic — the model's own JSON can't tell us
@@ -104,12 +110,15 @@ export default function Home() {
   // Editable copies shown on the confirm screen. `steps` is null when the
   // photo had no worked solution — the confirm UI adapts to whichever
   // shape came back (see LOCKS).
-  const [problem, setProblem] = useState("");
+  const [problemText, setProblemText] = useState("");
+  const [problemLatex, setProblemLatex] = useState("");
   const [steps, setSteps] = useState<string[] | null>(null);
 
-  const [confirmed, setConfirmed] = useState<{ problem: string; steps: string[] | null } | null>(
-    null
-  );
+  const [confirmed, setConfirmed] = useState<{
+    text: string;
+    latex: string;
+    steps: string[] | null;
+  } | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [solved, setSolved] = useState<SolveResult | null>(null);
@@ -181,7 +190,8 @@ export default function Home() {
     const item = items[index];
     setQueueIndex(index);
     setTranscribeResult(item);
-    setProblem(item.problemStatementLatex);
+    setProblemText(item.problemText);
+    setProblemLatex(item.problemLatex);
     setSteps(item.hasWorkedSolution ? item.solutionSteps : null);
     setConfirmed(null);
     setAnalysis(null);
@@ -208,8 +218,9 @@ export default function Home() {
     setQueue([]);
     setQueueIndex(0);
     setTranscribeError(null);
-    setTranscribeResult({ hasWorkedSolution: false, problemStatementLatex: "" });
-    setProblem("");
+    setTranscribeResult({ hasWorkedSolution: false, problemText: "", problemLatex: "" });
+    setProblemText("");
+    setProblemLatex("");
     setSteps(null);
     setConfirmed(null);
     setAnalysis(null);
@@ -222,8 +233,9 @@ export default function Home() {
   // scratch; solution steps present -> existing analyze flow, unchanged.
   // `confirmed` stays in state on failure so retrying never forces a
   // re-upload or re-transcription.
-  async function runResult(problemToUse: string, stepsToUse: string[] | null) {
-    setConfirmed({ problem: problemToUse, steps: stepsToUse });
+  async function runResult(text: string, latex: string, stepsToUse: string[] | null) {
+    const problemToUse = composeProblem(text, latex);
+    setConfirmed({ text, latex, steps: stepsToUse });
     setIsWorking(true);
     setResultError(null);
     setAnalysis(null);
@@ -248,7 +260,8 @@ export default function Home() {
           setAnalysis(streamed);
           saveHistoryEntry({
             at: Date.now(),
-            problemLatex: problemToUse,
+            problemLatex: latex,
+            problemText: text,
             outcome: streamed.isCorrect ? "correct" : "incorrect",
             misconceptionSummary: streamed.misconceptionSummary,
             misconceptionTag: streamed.misconceptionTag ?? null,
@@ -271,7 +284,8 @@ export default function Home() {
           setAnalysis(data);
           saveHistoryEntry({
             at: Date.now(),
-            problemLatex: problemToUse,
+            problemLatex: latex,
+            problemText: text,
             outcome: data.isCorrect ? "correct" : "incorrect",
             misconceptionSummary: data.misconceptionSummary,
             misconceptionTag: data.misconceptionTag ?? null,
@@ -291,7 +305,8 @@ export default function Home() {
         setSolved(data);
         saveHistoryEntry({
           at: Date.now(),
-          problemLatex: problemToUse,
+          problemLatex: latex,
+          problemText: text,
           outcome: "solved",
           misconceptionSummary: null,
         });
@@ -303,8 +318,9 @@ export default function Home() {
     }
   }
 
-  async function runHints(problemToUse: string) {
-    setConfirmed({ problem: problemToUse, steps: null });
+  async function runHints(text: string, latex: string) {
+    const problemToUse = composeProblem(text, latex);
+    setConfirmed({ text, latex, steps: null });
     setIsHinting(true);
     setResultError(null);
     setAnalysis(null);
@@ -422,7 +438,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          problemStatementLatex: confirmed.problem,
+          problemStatementLatex: composeProblem(confirmed.text, confirmed.latex),
           misconceptionSummary: analysis.misconceptionSummary,
         }),
       });
@@ -445,7 +461,7 @@ export default function Home() {
     setIsAsking(true);
     setChatError(null);
     const contextSummary = [
-      `Problem (LaTeX): ${confirmed.problem}`,
+      `Problem (LaTeX): ${composeProblem(confirmed.text, confirmed.latex)}`,
       confirmed.steps
         ? `Student steps (LaTeX): ${confirmed.steps.join(" | ")}`
         : "The student submitted no steps of their own.",
@@ -490,7 +506,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          problemStatementLatex: confirmed.problem,
+          problemStatementLatex: composeProblem(confirmed.text, confirmed.latex),
           stepsLatex: confirmed.steps,
           fixedStepIndex: idx,
           fixedStepLatex: fixLatex ?? confirmed.steps[idx],
@@ -527,7 +543,8 @@ export default function Home() {
     setQueueIndex(0);
     setTranscribeResult(null);
     setTranscribeError(null);
-    setProblem("");
+    setProblemText("");
+    setProblemLatex("");
     setSteps(null);
     setConfirmed(null);
     setAnalysis(null);
@@ -717,8 +734,24 @@ export default function Home() {
               )}
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-ink">Problem statement</label>
-                <MathInput defaultValue={problem} onChange={setProblem} />
+                <label className="text-sm font-medium text-ink">What does the problem ask?</label>
+                <textarea
+                  value={problemText}
+                  onChange={(e) => setProblemText(e.target.value)}
+                  rows={2}
+                  placeholder="e.g. Solve using the quadratic formula."
+                  className="w-full resize-y rounded-lg border-2 border-ink bg-white px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-ink">The math</label>
+                <MathInput
+                  key={`problem-${queueIndex}`}
+                  defaultValue={problemLatex}
+                  onChange={setProblemLatex}
+                  placeholder="e.g. x^2+4x+3=0"
+                />
               </div>
 
               {image && steps && transcriptionLooksShaky(steps) && (
@@ -762,14 +795,17 @@ export default function Home() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => runResult(problem, cleanedSteps)} disabled={isWorking || !problem}>
+                <Button
+                  onClick={() => runResult(problemText, problemLatex, cleanedSteps)}
+                  disabled={isWorking || (!problemText.trim() && !problemLatex.trim())}
+                >
                   {isWorking ? "Working\u2026" : "Confirm"}
                 </Button>
                 {!cleanedSteps && (
                   <Button
                     variant="outline"
-                    onClick={() => runHints(problem)}
-                    disabled={isWorking || isHinting || !problem}
+                    onClick={() => runHints(problemText, problemLatex)}
+                    disabled={isWorking || isHinting || (!problemText.trim() && !problemLatex.trim())}
                   >
                     {isHinting ? "Thinking\u2026" : "Just give me a hint"}
                   </Button>
@@ -871,7 +907,7 @@ export default function Home() {
               variant="outline"
               size="sm"
               className="self-start"
-              onClick={() => confirmed && runResult(confirmed.problem, confirmed.steps)}
+              onClick={() => confirmed && runResult(confirmed.text, confirmed.latex, confirmed.steps)}
               disabled={isWorking || !confirmed}
             >
               {isWorking ? "Retrying\u2026" : "Retry"}
@@ -966,7 +1002,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => confirmed && runResult(confirmed.problem, null)}
+                onClick={() => confirmed && runResult(confirmed.text, confirmed.latex, null)}
                 disabled={isWorking}
               >
                 Just show me the full solution
@@ -1072,7 +1108,7 @@ export default function Home() {
                       // Keep the confirm screen's editable copies in sync so
                       // goBack() shows the fixed step, not the stale one.
                       setSteps(next);
-                      runResult(confirmed.problem, next);
+                      runResult(confirmed.text, confirmed.latex, next);
                     }}
                   >
                     Re-check my fix

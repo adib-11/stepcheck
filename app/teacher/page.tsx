@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { readFile, type UploadedImage } from "@/components/ImageUpload";
 import LoadingNote from "@/components/LoadingNote";
+import { composeProblem } from "@/lib/problem";
 
 interface StudentResult {
   name: string;
@@ -69,7 +70,7 @@ export default function TeacherPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            problemStatementLatex: item.problemStatementLatex,
+            problemStatementLatex: composeProblem(item.problemText, item.problemLatex),
             confirmedSteps: item.solutionSteps,
           }),
         });

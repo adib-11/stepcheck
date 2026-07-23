@@ -66,7 +66,8 @@ export default function HistoryList() {
               </p>
             </div>
             <div className="mt-2 rounded-md border border-hairline-soft bg-surface px-3 py-2">
-              <MathView latex={entry.problemLatex} />
+              {entry.problemText && <p className="text-sm text-ink">{entry.problemText}</p>}
+              {entry.problemLatex.trim() !== "" && <MathView latex={entry.problemLatex} />}
             </div>
             {entry.misconceptionSummary && (
               <p className="mt-2 text-ink-muted">{entry.misconceptionSummary}</p>

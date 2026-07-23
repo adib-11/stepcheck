@@ -19,7 +19,14 @@ handwritten attempt at solving it.
 
 For EACH problem in the photo, in reading order (top to bottom, left column
 before right):
-1. Transcribe the problem statement into LaTeX.
+1. Split the problem statement into two parts:
+   - "problemText": the wording of the problem in plain natural language.
+     No LaTeX commands, no math symbols beyond ordinary punctuation, and no
+     problem number ("6." is layout, not content). Example: "Solve using the
+     quadratic formula."
+   - "problemLatex": ONLY the mathematical expression(s), as LaTeX, with no
+     prose words mixed in. Example: "x^2 + 4x + 3 = 0". Use "" (empty
+     string) if the problem contains no symbolic math.
 2. Decide whether the photo also shows worked solution steps written by the
    student for THAT problem (not just the problem, and not a printed answer
    key) — if there is any handwritten attempt at solving it, however
@@ -33,20 +40,22 @@ exactly this shape, with one entry per problem:
 
 {
   "problems": [
-    { "hasWorkedSolution": false, "problemStatementLatex": string }
+    { "hasWorkedSolution": false, "problemText": string, "problemLatex": string }
     OR
-    { "hasWorkedSolution": true, "problemStatementLatex": string, "solutionSteps": string[] }
+    { "hasWorkedSolution": true, "problemText": string, "problemLatex": string, "solutionSteps": string[] }
   ]
 }`;
 
 interface NoSolutionItem {
   hasWorkedSolution: false;
-  problemStatementLatex: string;
+  problemText: string;
+  problemLatex: string;
 }
 
 interface WithSolutionItem {
   hasWorkedSolution: true;
-  problemStatementLatex: string;
+  problemText: string;
+  problemLatex: string;
   solutionSteps: string[];
 }
 
@@ -59,9 +68,10 @@ interface TranscribeBatch {
 function isTranscribeItem(value: unknown): value is TranscribeItem {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
-  if (typeof v.problemStatementLatex !== "string" || v.problemStatementLatex.trim() === "") {
-    return false;
-  }
+  // problemText carries the statement, so it must be non-empty; problemLatex
+  // is legitimately "" for prose-only problems.
+  if (typeof v.problemText !== "string" || v.problemText.trim() === "") return false;
+  if (typeof v.problemLatex !== "string") return false;
   if (v.hasWorkedSolution === false) return true;
   if (v.hasWorkedSolution === true) {
     return (

@@ -1,6 +1,9 @@
 export interface HistoryEntry {
   at: number; // Date.now()
   problemLatex: string;
+  // Prose half of the split problem statement. Optional: entries saved
+  // before the prose/math split don't have it.
+  problemText?: string;
   outcome: "correct" | "incorrect" | "solved";
   misconceptionSummary: string | null;
   // Optional: entries saved before tagging existed don't have it.
