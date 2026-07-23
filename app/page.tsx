@@ -114,7 +114,11 @@ export default function Home() {
   const [isPracticeLoading, setIsPracticeLoading] = useState(false);
   const [practiceError, setPracticeError] = useState<string | null>(null);
 
-  const stage = analysis || solved || resultError ? 3 : transcribeResult ? 2 : 1;
+  const [hints, setHints] = useState<string[] | null>(null);
+  const [hintsShown, setHintsShown] = useState(1);
+  const [isHinting, setIsHinting] = useState(false);
+
+  const stage = analysis || solved || resultError || hints ? 3 : transcribeResult ? 2 : 1;
 
   async function transcribe() {
     if (!image) return;
@@ -179,6 +183,8 @@ export default function Home() {
     setFixLatex(null);
     setPractice(null);
     setPracticeError(null);
+    setHints(null);
+    setHintsShown(1);
     setScreen("results");
 
     try {
@@ -230,6 +236,34 @@ export default function Home() {
     }
   }
 
+  async function runHints(problemToUse: string) {
+    setConfirmed({ problem: problemToUse, steps: null });
+    setIsHinting(true);
+    setResultError(null);
+    setAnalysis(null);
+    setSolved(null);
+    setHints(null);
+    setHintsShown(1);
+    setScreen("results");
+    try {
+      const res = await fetch("/api/hints", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ problemStatementLatex: problemToUse }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResultError({ message: data.error ?? "Couldn't get hints.", raw: data.raw });
+        return;
+      }
+      setHints(data.hints);
+    } catch {
+      setResultError({ message: "Network error: could not reach the hints API." });
+    } finally {
+      setIsHinting(false);
+    }
+  }
+
   async function fetchPractice() {
     if (!confirmed || !analysis?.misconceptionSummary) return;
     setIsPracticeLoading(true);
@@ -278,6 +312,8 @@ export default function Home() {
     setFixLatex(null);
     setPractice(null);
     setPracticeError(null);
+    setHints(null);
+    setHintsShown(1);
     setScreen("landing");
   }
 
@@ -483,9 +519,20 @@ export default function Home() {
                 )}
               </div>
 
-              <Button onClick={() => runResult(problem, cleanedSteps)} disabled={isWorking || !problem}>
-                {isWorking ? "Working\u2026" : "Confirm"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => runResult(problem, cleanedSteps)} disabled={isWorking || !problem}>
+                  {isWorking ? "Working\u2026" : "Confirm"}
+                </Button>
+                {!cleanedSteps && (
+                  <Button
+                    variant="outline"
+                    onClick={() => runHints(problem)}
+                    disabled={isWorking || isHinting || !problem}
+                  >
+                    {isHinting ? "Thinking\u2026" : "Just give me a hint"}
+                  </Button>
+                )}
+              </div>
               <p className="text-xs text-ink-muted">
                 Checking usually takes 1-2 minutes -- Gemma solves the whole
                 problem itself before marking anything.
@@ -518,7 +565,7 @@ export default function Home() {
             request — analyze/solve calls routinely take 60-90+ seconds,
             so this must not look like it's stuck. Only hidden once a
             result or error has actually arrived (isWorking false). */}
-        {isWorking && !resultError && !solved && !analysis && (
+        {(isWorking || isHinting) && !resultError && !solved && !analysis && !hints && (
           <section className="flex flex-col items-center gap-4 rounded-lg border border-hairline bg-white p-8 text-center">
             <div className="flex gap-2" aria-hidden>
               {[0, 1, 2].map((i) => (
@@ -618,6 +665,46 @@ export default function Home() {
             <Button variant="outline" size="sm" onClick={startOver} className="self-start">
               Check another problem
             </Button>
+          </section>
+        )}
+
+        {hints && (
+          <section className="flex flex-col gap-4 rounded-lg border border-hairline bg-white p-6">
+            <div className="rounded-md bg-surface p-5">
+              <p className="font-display text-xl font-semibold tracking-tight text-ink">
+                Nudges, not answers
+              </p>
+              <p className="mt-1 text-sm text-ink-muted">
+                Each hint is a little stronger than the last. Reveal only as
+                many as you need, then try it on paper.
+              </p>
+            </div>
+
+            {hints.slice(0, hintsShown).map((hint, i) => (
+              <div key={i} className="rounded-md border border-hairline-soft bg-surface-soft p-4 text-sm">
+                <p className="font-medium text-ink">Hint {i + 1}</p>
+                <p className="mt-1 text-ink-muted">{hint}</p>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap gap-2">
+              {hintsShown < hints.length && (
+                <Button variant="outline" size="sm" onClick={() => setHintsShown((n) => n + 1)}>
+                  Stronger hint
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => confirmed && runResult(confirmed.problem, null)}
+                disabled={isWorking}
+              >
+                Just show me the full solution
+              </Button>
+              <Button variant="outline" size="sm" onClick={startOver}>
+                Check another problem
+              </Button>
+            </div>
           </section>
         )}
 
