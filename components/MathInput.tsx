@@ -75,7 +75,6 @@ export default function MathInput({
         placeholder={placeholder}
         style={{
           width: "100%",
-          minHeight: "3.5rem",
           fontSize: "1.25rem",
           padding: "0.65rem 1rem",
           borderRadius: "0.5rem", // 8px — neobrutalist base radius
