@@ -5,7 +5,7 @@ import { generateJson } from "@/lib/gemini";
 export const runtime = "nodejs";
 // Same rationale as /api/analyze and /api/solve: any route calling Gemma
 // needs this or the platform's default timeout kills long requests as 502s.
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 // Single vision call that both transcribes the photo and classifies whether
 // it contains a worked solution attempt, not just the problem statement.

@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 // Without this, a hosting platform's default serverless function timeout
 // (e.g. Vercel's 60s on Hobby) can kill an otherwise-successful request
 // mid-flight, surfacing as a 502 gateway error rather than an app error.
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 const INSTRUCTION = `${GRADING_RULES}
 

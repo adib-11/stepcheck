@@ -4,7 +4,7 @@ import { generateJson, warnIfLooksLikeLatex } from "@/lib/gemini";
 
 export const runtime = "nodejs";
 // Same rationale as the other Gemma routes.
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 const INSTRUCTION = `You are a math tutor judging a student's REASONING, not
 their algebra. The student fixed a wrong step in their solution and then

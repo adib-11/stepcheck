@@ -5,7 +5,7 @@ import { generateJson, warnIfLooksLikeLatex } from "@/lib/gemini";
 export const runtime = "nodejs";
 // Same rationale as the other Gemma routes: without this, platform default
 // serverless timeouts kill long generations mid-flight as gateway 502s.
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 const INSTRUCTION = `You are a math tutor. A student just got a problem wrong.
 You will be given the original problem (LaTeX) and a plain-language summary

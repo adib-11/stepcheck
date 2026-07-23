@@ -5,7 +5,7 @@ import { GRADING_RULES, PLAIN_LANGUAGE_RULE } from "@/lib/prompts";
 
 export const runtime = "nodejs";
 // Same rationale as /api/analyze — the stream stays open just as long.
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 // ponytail: no retries and no JSON salvage here — a broken stream makes the
 // client silently fall back to the classic /api/analyze, which has both.

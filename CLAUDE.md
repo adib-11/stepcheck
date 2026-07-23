@@ -82,7 +82,7 @@ malformed/unparseable response returns HTTP 502 with the raw text attached so
 the UI can show it in a "Raw model output" `<details>` block.
 
 All Gemma-calling routes (including both stream routes) set
-`export const maxDuration = 180` — Gemma responses on
+`export const maxDuration = 300` (the Vercel Hobby + Fluid Compute ceiling) — Gemma responses on
 multi-step problems routinely take 60–150s+, well past typical serverless
 defaults, so this must stay set on every route that calls Gemma or requests
 will be killed mid-flight and surface as a 502.

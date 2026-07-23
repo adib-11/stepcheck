@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 // Same rationale as /api/analyze: solve() hits the same model with similar
 // reasoning demands and can legitimately run 60-150s+, so it needs the same
 // extended function duration to avoid an infra-level 502 mid-request.
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 // Clean sibling to /api/analyze — solves a problem from scratch with full
 // explanation. Does NOT compare against any student work (there is none to
