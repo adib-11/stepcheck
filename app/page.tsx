@@ -10,7 +10,9 @@ import StagedStatus from "@/components/StagedStatus";
 import Screen from "@/components/Screen";
 import LandingHero from "@/components/LandingHero";
 import HistoryList from "@/components/HistoryList";
+import WaitProgress from "@/components/WaitProgress";
 import { saveHistoryEntry } from "@/lib/history";
+import { saveDuration } from "@/lib/durations";
 import { composeProblem } from "@/lib/problem";
 
 // MathLive touches the DOM (custom elements) on import, so the input must
@@ -253,11 +255,13 @@ export default function Home() {
     setLiveFeedback([]);
     setScreen("results");
 
+    const startedAt = Date.now();
     try {
       if (stepsToUse && stepsToUse.length > 0) {
         const streamed = await streamAnalyze(problemToUse, stepsToUse).catch(() => null);
         if (streamed) {
           setAnalysis(streamed);
+          saveDuration({ kind: "analyze", stepCount: stepsToUse.length, ms: Date.now() - startedAt });
           saveHistoryEntry({
             at: Date.now(),
             problemLatex: latex,
@@ -282,6 +286,7 @@ export default function Home() {
             return;
           }
           setAnalysis(data);
+          saveDuration({ kind: "analyze", stepCount: stepsToUse.length, ms: Date.now() - startedAt });
           saveHistoryEntry({
             at: Date.now(),
             problemLatex: latex,
@@ -303,6 +308,7 @@ export default function Home() {
           return;
         }
         setSolved(data);
+        saveDuration({ kind: "solve", stepCount: 0, ms: Date.now() - startedAt });
         saveHistoryEntry({
           at: Date.now(),
           problemLatex: latex,
@@ -879,7 +885,10 @@ export default function Home() {
                   : "Gemma is working through this problem from scratch."}
               </p>
             </div>
-            <LoadingNote label="This usually takes under a minute, but can take longer." />
+            <WaitProgress
+              kind={confirmed?.steps ? "analyze" : "solve"}
+              stepCount={confirmed?.steps?.length ?? 0}
+            />
             {confirmed?.steps && liveFeedback.length > 0 && (
               <div className="flex w-full flex-col gap-2 text-left">
                 {confirmed.steps.map((_, i) => {
