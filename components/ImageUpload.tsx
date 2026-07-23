@@ -106,8 +106,8 @@ export default function ImageUpload({ onChange }: ImageUploadProps) {
           setIsDragging(false);
           void handleFile(e.dataTransfer.files[0]);
         }}
-        className={`flex min-h-[10rem] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-4 text-center text-sm text-ink-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-          isDragging ? "border-brand bg-brand/5" : "border-hairline bg-surface-soft"
+        className={`flex min-h-[10rem] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 text-center text-sm text-ink-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+          isDragging ? "border-brand bg-brand/5" : "border-ink bg-surface-soft"
         }`}
       >
         {preview ? (
@@ -134,7 +134,7 @@ export default function ImageUpload({ onChange }: ImageUploadProps) {
       <button
         type="button"
         onClick={() => cameraRef.current?.click()}
-        className="mt-2 w-full rounded-full border border-hairline bg-white px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface sm:hidden"
+        className="mt-2 w-full rounded-lg border-2 border-ink bg-white px-4 py-2 text-sm font-semibold text-ink shadow-brut-sm transition-[transform,box-shadow,background-color] duration-200 ease-out hover:bg-surface active:translate-x-0.5 active:translate-y-0.5 active:shadow-none sm:hidden"
       >
         Take a photo
       </button>

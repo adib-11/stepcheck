@@ -126,7 +126,7 @@ export default function TeacherPage() {
         </p>
       </header>
 
-      <section className="flex flex-col gap-4 rounded-lg border border-hairline bg-white p-6">
+      <section className="flex flex-col gap-4 rounded-lg border-2 border-ink bg-white shadow-brut p-6">
         <label className="text-sm font-medium text-ink">
           Photos of student attempts (JPEG/PNG, one attempt per photo)
         </label>
@@ -136,7 +136,7 @@ export default function TeacherPage() {
           multiple
           disabled={isRunning}
           onChange={(e) => void pickFiles(e.target.files)}
-          className="text-sm text-ink-muted file:mr-3 file:rounded-full file:border file:border-hairline file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-ink"
+          className="text-sm text-ink-muted file:mr-3 file:rounded-lg file:border-2 file:border-ink file:bg-white file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink"
         />
         <Button onClick={run} disabled={isRunning || images.length === 0}>
           {isRunning ? `Marking ${doneCount + 1} of ${images.length}…` : `Mark ${images.length || "the"} attempts`}
@@ -147,7 +147,7 @@ export default function TeacherPage() {
       </section>
 
       {results.length > 0 && (
-        <section className="flex flex-col gap-3 rounded-lg border border-hairline bg-white p-6 text-sm">
+        <section className="flex flex-col gap-3 rounded-lg border-2 border-ink bg-white shadow-brut p-6 text-sm">
           {results.map((r) => (
             <div key={r.name} className="flex items-baseline justify-between gap-3 border-b border-hairline-soft pb-2 last:border-b-0 last:pb-0">
               <p className="font-mono text-xs text-ink-muted">{r.name}</p>
@@ -172,7 +172,7 @@ export default function TeacherPage() {
       )}
 
       {summary && (
-        <section className="flex flex-col gap-4 rounded-lg border border-hairline bg-white p-6 text-sm">
+        <section className="flex flex-col gap-4 rounded-lg border-2 border-ink bg-white shadow-brut p-6 text-sm">
           <p className="font-display text-xl font-semibold tracking-tight text-ink">
             What the class misunderstands
           </p>

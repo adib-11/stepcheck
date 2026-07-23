@@ -78,8 +78,8 @@ export default function MathInput({
           minHeight: "3.5rem",
           fontSize: "1.25rem",
           padding: "0.65rem 1rem",
-          borderRadius: "0.5rem", // 8px — {rounded.md}, the input radius
-          border: "1px solid #e5e5e5", // {colors.hairline}
+          borderRadius: "0.5rem", // 8px — neobrutalist base radius
+          border: "2px solid #001820", // {colors.ink} — raw hex: MathLive host style can't use Tailwind
           backgroundColor: "#ffffff",
         }}
       >

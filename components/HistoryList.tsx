@@ -42,7 +42,7 @@ export default function HistoryList() {
         Recent checks
       </h2>
       {repeated && (
-        <div className="mt-3 rounded-md border border-mark-flag/40 bg-mark-flag/5 p-4 text-sm">
+        <div className="mt-3 rounded-md border-2 border-mark-flag bg-mark-flag/5 p-4 text-sm">
           <p className="font-medium text-ink">Pattern spotted</p>
           <p className="mt-1 text-ink-muted">
             You&apos;ve slipped on {repeated[0]} {repeated[1]} times recently —
@@ -51,8 +51,12 @@ export default function HistoryList() {
         </div>
       )}
       <div className="mt-3 flex flex-col gap-3">
-        {entries.map((entry) => (
-          <div key={entry.at} className="rounded-lg border border-hairline bg-white p-4 text-sm">
+        {entries.map((entry, index) => (
+          <div
+            key={entry.at}
+            className="screen-transition rounded-lg border-2 border-ink bg-white p-4 text-sm shadow-brut"
+            style={{ animationDelay: `${index * 80}ms` }}
+          >
             <div className="flex items-baseline justify-between gap-3">
               <p className={`font-medium ${OUTCOME_LABEL[entry.outcome].className}`}>
                 {OUTCOME_LABEL[entry.outcome].text}
