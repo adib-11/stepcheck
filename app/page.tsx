@@ -55,6 +55,11 @@ interface SolveResult {
   finalAnswerLatex: string;
 }
 
+interface ChatTurn {
+  role: "student" | "tutor";
+  text: string;
+}
+
 interface ApiErrorState {
   message: string;
   raw?: string;
@@ -117,6 +122,11 @@ export default function Home() {
   const [hints, setHints] = useState<string[] | null>(null);
   const [hintsShown, setHintsShown] = useState(1);
   const [isHinting, setIsHinting] = useState(false);
+
+  const [chat, setChat] = useState<ChatTurn[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isAsking, setIsAsking] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const stage = analysis || solved || resultError || hints ? 3 : transcribeResult ? 2 : 1;
 
@@ -185,6 +195,9 @@ export default function Home() {
     setPracticeError(null);
     setHints(null);
     setHintsShown(1);
+    setChat([]);
+    setChatInput("");
+    setChatError(null);
     setScreen("results");
 
     try {
@@ -290,6 +303,47 @@ export default function Home() {
     }
   }
 
+  async function askFollowUp() {
+    const question = chatInput.trim();
+    if (!question || !confirmed || isAsking) return;
+    setIsAsking(true);
+    setChatError(null);
+    const contextSummary = [
+      `Problem (LaTeX): ${confirmed.problem}`,
+      confirmed.steps
+        ? `Student steps (LaTeX): ${confirmed.steps.join(" | ")}`
+        : "The student submitted no steps of their own.",
+      analysis ? `Marking result JSON: ${JSON.stringify(analysis)}` : "",
+      solved ? `Worked solution JSON: ${JSON.stringify(solved)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    try {
+      const res = await fetch("/api/followup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // ponytail: transcript capped at the last 6 turns — summarize older
+        // turns only if students genuinely hold long conversations here.
+        body: JSON.stringify({ contextSummary, transcript: chat.slice(-6), question }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setChatError(data.error ?? "Couldn't answer that.");
+        return;
+      }
+      setChat((prev) => [
+        ...prev,
+        { role: "student", text: question },
+        { role: "tutor", text: data.answer },
+      ]);
+      setChatInput("");
+    } catch {
+      setChatError("Network error: could not reach the follow-up API.");
+    } finally {
+      setIsAsking(false);
+    }
+  }
+
   function updateStep(index: number, latex: string) {
     setSteps((prev) => {
       if (!prev) return prev;
@@ -314,6 +368,9 @@ export default function Home() {
     setPracticeError(null);
     setHints(null);
     setHintsShown(1);
+    setChat([]);
+    setChatInput("");
+    setChatError(null);
     setScreen("landing");
   }
 
@@ -855,6 +912,51 @@ export default function Home() {
             <Button variant="outline" size="sm" onClick={startOver} className="self-start">
               Check another problem
             </Button>
+          </section>
+        )}
+
+        {(analysis || solved) && (
+          <section className="flex flex-col gap-3 rounded-lg border border-hairline bg-white p-6 text-sm">
+            <div>
+              <p className="font-medium text-ink">Ask a follow-up</p>
+              <p className="mt-1 text-ink-muted">
+                Scoped to this problem and its marking — ask why a step is
+                wrong, or what to review next.
+              </p>
+            </div>
+
+            {chat.map((turn, i) => (
+              <div
+                key={i}
+                className={
+                  turn.role === "student"
+                    ? "rounded-md bg-surface px-3 py-2 text-ink"
+                    : "rounded-md border border-hairline-soft bg-surface-soft px-3 py-2 text-ink-muted"
+                }
+              >
+                <span className="font-medium text-ink">
+                  {turn.role === "student" ? "You: " : "Gemma: "}
+                </span>
+                {turn.text}
+              </div>
+            ))}
+            {chatError && <p className="text-mark-error">{chatError}</p>}
+
+            <div className="flex gap-2">
+              <input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") askFollowUp();
+                }}
+                placeholder="Why is that step wrong?"
+                className="w-full rounded-md border border-hairline bg-white px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              <Button size="sm" onClick={askFollowUp} disabled={isAsking || !chatInput.trim()}>
+                {isAsking ? "Thinking…" : "Ask"}
+              </Button>
+            </div>
+            {isAsking && <LoadingNote label="Gemma is thinking about your question." />}
           </section>
         )}
       </main>
