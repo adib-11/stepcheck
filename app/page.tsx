@@ -581,7 +581,7 @@ export default function Home() {
   })();
 
   const header = (
-    <header className="flex flex-col gap-4">
+    <header className="flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-3">
         {screen !== "landing" && (
           <button
@@ -650,9 +650,10 @@ export default function Home() {
   if (screen === "upload") {
     return (
       <Screen screenKey="upload">
-        <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
+        <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6">
           {header}
 
+          <div className="mx-auto w-full max-w-3xl">
           <section className="flex flex-col gap-4 rounded-lg border-2 border-ink bg-white shadow-brut p-6">
             <label className="text-sm font-medium text-ink">
               Page 1 — Photo of the problem (and your working, if you have any)
@@ -693,6 +694,7 @@ export default function Home() {
               No photo? Type the problem instead
             </button>
           </section>
+          </div>
         </main>
       </Screen>
     );
@@ -701,7 +703,7 @@ export default function Home() {
   if (screen === "confirm") {
     return (
       <Screen screenKey="confirm">
-        <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
+        <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6">
           {header}
 
           {transcribeResult && (
@@ -834,7 +836,7 @@ export default function Home() {
   // screen === "results"
   return (
     <Screen screenKey="results">
-      <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
+      <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6">
         {header}
 
         {/* Loading state: rendered immediately upon entering this screen
