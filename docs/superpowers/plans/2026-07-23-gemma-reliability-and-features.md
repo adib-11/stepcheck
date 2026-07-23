@@ -2332,7 +2332,7 @@ git commit -m "feat: explain-back check judging the reasoning behind a fixed ste
 
 Why: same three Gemma calls, different buyer — a teacher photographs a stack of attempts at one problem and gets "here's what the class misunderstands." Sequential processing (one photo at a time) is deliberate: free-tier rate limits make parallel calls self-defeating.
 
-- [ ] **Step 1: Create `app/api/class-summary/route.ts`**
+- [x] **Step 1: Create `app/api/class-summary/route.ts`**
 
 ```ts
 import { GoogleGenAI } from "@google/genai";
@@ -2455,7 +2455,7 @@ ${misconceptions.map((m: string, i: number) => `${i + 1}. ${m}`).join("\n")}`;
 }
 ```
 
-- [ ] **Step 2: Verify the route in isolation**
+- [x] **Step 2: Verify the route in isolation**
 
 Run: `npm run lint && npm run build` (expected: pass). Then:
 
@@ -2467,7 +2467,7 @@ curl -s -X POST localhost:3000/api/class-summary \
 
 Expected: `{ "themes": [...], "advice": "..." }` with at least one theme grouping the two sign-related summaries.
 
-- [ ] **Step 3: Create `app/teacher/page.tsx`**
+- [x] **Step 3: Create `app/teacher/page.tsx`**
 
 ```tsx
 "use client";
@@ -2665,7 +2665,7 @@ export default function TeacherPage() {
 }
 ```
 
-- [ ] **Step 4: Link it from the landing screen**
+- [x] **Step 4: Link it from the landing screen**
 
 In `app/page.tsx`, in the landing return (Task 6 Step 4), add after `<HistoryList />`:
 
@@ -2679,11 +2679,11 @@ In `app/page.tsx`, in the landing return (Task 6 Step 4), add after `<HistoryLis
         </p>
 ```
 
-- [ ] **Step 5: Verify in the browser**
+- [x] **Step 5: Verify in the browser**
 
 Run: `npm run lint && npm run build` (expected: pass). Visit `localhost:3000/teacher`, select 2–3 worked-solution photos from `test-problems/`, click Mark. Expected: rows flip Waiting → Marking → verdict one at a time (each can take 60s+); wrong attempts show their misconception sentence; after the last photo, a "What the class misunderstands" card with themed groups and reteaching advice. Photos with no worked solution show a row-level error without stopping the batch.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/api/class-summary/route.ts app/teacher/page.tsx app/page.tsx
@@ -2706,7 +2706,7 @@ git commit -m "feat: teacher mode — batch-mark attempts and summarize class mi
 
 Why: the biggest perceived-latency win — the student watches ticks appear step by step during the wait instead of staring at dots for two minutes. Layered last because the fallback depends on the hardened classic route.
 
-- [ ] **Step 1: Extract shared prompt text into `lib/prompts.ts`**
+- [x] **Step 1: Extract shared prompt text into `lib/prompts.ts`**
 
 Route files must only export HTTP handlers/config, so shared text lives in `lib/`. Create `lib/prompts.ts` by MOVING (verbatim) two chunks of `app/api/analyze/route.ts`'s `INSTRUCTION`:
 
@@ -2795,7 +2795,7 @@ correctContinuationExplanation must be null when isCorrect is true.`;
 
 Verify with the Task 7 curl that `/api/analyze` output is unchanged.
 
-- [ ] **Step 2: Create `app/api/analyze-stream/route.ts`**
+- [x] **Step 2: Create `app/api/analyze-stream/route.ts`**
 
 ```ts
 import { GoogleGenAI } from "@google/genai";
@@ -2886,7 +2886,7 @@ ${confirmedSteps.map((step: string, i: number) => `${i}: ${step}`).join("\n")}`;
 }
 ```
 
-- [ ] **Step 3: Consume the stream in `app/page.tsx`, with fallback**
+- [x] **Step 3: Consume the stream in `app/page.tsx`, with fallback**
 
 Add state next to the other result state:
 
@@ -3014,7 +3014,7 @@ In `runResult`, replace the analyze branch's body (the `fetch("/api/analyze", ..
         }
 ```
 
-- [ ] **Step 4: Show live marks inside the loading card**
+- [x] **Step 4: Show live marks inside the loading card**
 
 Inside the results-screen loading section, after the `<LoadingNote ... />` line, add:
 
@@ -3044,7 +3044,7 @@ Inside the results-screen loading section, after the `<LoadingNote ... />` line,
 
 (`StepMark` is already imported; this reuses its existing draw-on animation, no new animation system.)
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `npm run lint && npm run build` (expected: pass). Streaming path:
 
@@ -3058,7 +3058,7 @@ Expected: lines arrive incrementally (`-N` disables curl buffering) — two step
 
 In the browser: run an analyze with 3+ steps and watch the loading card — tick/cross rows appear one by one before the full results screen replaces them. Fallback check: temporarily rename the `app/api/analyze-stream` directory to `app/api/analyze-stream-off`, run an analyze — expected: identical final results via the classic route (no user-visible error) — then rename it back.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/prompts.ts app/api/analyze-stream/route.ts app/api/analyze/route.ts app/page.tsx

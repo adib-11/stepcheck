@@ -131,6 +131,10 @@ export default function Home() {
   const [hintsShown, setHintsShown] = useState(1);
   const [isHinting, setIsHinting] = useState(false);
 
+  // Step marks that have arrived so far over the analyze stream, shown
+  // inside the loading card while the rest is still generating.
+  const [liveFeedback, setLiveFeedback] = useState<StepFeedback[]>([]);
+
   const [chat, setChat] = useState<ChatTurn[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isAsking, setIsAsking] = useState(false);
@@ -193,6 +197,7 @@ export default function Home() {
     setFixLatex(null);
     setExplainText("");
     setExplainFeedback(null);
+    setLiveFeedback([]);
     setScreen("confirm");
   }
 
@@ -233,31 +238,45 @@ export default function Home() {
     setChat([]);
     setChatInput("");
     setChatError(null);
+    setLiveFeedback([]);
     setScreen("results");
 
     try {
       if (stepsToUse && stepsToUse.length > 0) {
-        const res = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            problemStatementLatex: problemToUse,
-            confirmedSteps: stepsToUse,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setResultError({ message: data.error ?? "Analysis failed.", raw: data.raw });
-          return;
+        const streamed = await streamAnalyze(problemToUse, stepsToUse).catch(() => null);
+        if (streamed) {
+          setAnalysis(streamed);
+          saveHistoryEntry({
+            at: Date.now(),
+            problemLatex: problemToUse,
+            outcome: streamed.isCorrect ? "correct" : "incorrect",
+            misconceptionSummary: streamed.misconceptionSummary,
+            misconceptionTag: streamed.misconceptionTag ?? null,
+          });
+        } else {
+          setLiveFeedback([]);
+          const res = await fetch("/api/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              problemStatementLatex: problemToUse,
+              confirmedSteps: stepsToUse,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setResultError({ message: data.error ?? "Analysis failed.", raw: data.raw });
+            return;
+          }
+          setAnalysis(data);
+          saveHistoryEntry({
+            at: Date.now(),
+            problemLatex: problemToUse,
+            outcome: data.isCorrect ? "correct" : "incorrect",
+            misconceptionSummary: data.misconceptionSummary,
+            misconceptionTag: data.misconceptionTag ?? null,
+          });
         }
-        setAnalysis(data);
-        saveHistoryEntry({
-          at: Date.now(),
-          problemLatex: problemToUse,
-          outcome: data.isCorrect ? "correct" : "incorrect",
-          misconceptionSummary: data.misconceptionSummary,
-          misconceptionTag: data.misconceptionTag ?? null,
-        });
       } else {
         const res = await fetch("/api/solve", {
           method: "POST",
@@ -310,6 +329,88 @@ export default function Home() {
     } finally {
       setIsHinting(false);
     }
+  }
+
+  // Returns a full AnalysisResult if the stream produced a complete, valid
+  // marking; null on ANY shortfall — the caller then falls back to the
+  // classic /api/analyze, which has retries and JSON salvage.
+  async function streamAnalyze(
+    problemToUse: string,
+    stepsToUse: string[]
+  ): Promise<AnalysisResult | null> {
+    const res = await fetch("/api/analyze-stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ problemStatementLatex: problemToUse, confirmedSteps: stepsToUse }),
+    });
+    if (!res.ok || !res.body) return null;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    const feedback: StepFeedback[] = [];
+    let finalLine: Record<string, unknown> | null = null;
+
+    const handleLine = (line: string) => {
+      const t = line.trim().replace(/^```(?:json)?|```$/g, "").trim();
+      if (!t) return;
+      try {
+        const obj = JSON.parse(t);
+        if (
+          obj &&
+          typeof obj.stepIndex === "number" &&
+          (obj.status === "correct" || obj.status === "incorrect" || obj.status === "not_reached") &&
+          typeof obj.explanation === "string"
+        ) {
+          feedback.push(obj);
+          setLiveFeedback([...feedback]);
+        } else if (obj && obj.final === true) {
+          finalLine = obj;
+        }
+      } catch {
+        // Partial or junk line — ignore; completeness is checked at the end.
+      }
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      lines.forEach(handleLine);
+    }
+    // The stream usually ends WITHOUT a trailing newline, so the final line
+    // is still sitting in the buffer — flush it or the fallback always runs.
+    handleLine(buffer + decoder.decode());
+
+    // Snapshot through a cast: TS can't see the closure assignment and
+    // otherwise narrows finalLine to null/never here.
+    const fin = finalLine as Record<string, unknown> | null;
+
+    if (
+      !fin ||
+      feedback.length !== stepsToUse.length ||
+      typeof fin.isCorrect !== "boolean" ||
+      !(fin.firstErrorStepIndex === null || typeof fin.firstErrorStepIndex === "number") ||
+      !(fin.misconceptionSummary === null || typeof fin.misconceptionSummary === "string") ||
+      !(fin.misconceptionTag === null || typeof fin.misconceptionTag === "string") ||
+      !(fin.correctContinuation === null || typeof fin.correctContinuation === "string") ||
+      !(fin.correctContinuationExplanation === null ||
+        typeof fin.correctContinuationExplanation === "string")
+    ) {
+      return null;
+    }
+
+    return {
+      isCorrect: fin.isCorrect as boolean,
+      firstErrorStepIndex: fin.firstErrorStepIndex as number | null,
+      stepByStepFeedback: feedback,
+      misconceptionSummary: fin.misconceptionSummary as string | null,
+      misconceptionTag: fin.misconceptionTag as string | null,
+      correctContinuation: fin.correctContinuation as string | null,
+      correctContinuationExplanation: fin.correctContinuationExplanation as string | null,
+    };
   }
 
   async function fetchPractice() {
@@ -442,6 +543,7 @@ export default function Home() {
     setChat([]);
     setChatInput("");
     setChatError(null);
+    setLiveFeedback([]);
     setScreen("landing");
   }
 
@@ -728,6 +830,27 @@ export default function Home() {
               </p>
             </div>
             <LoadingNote label="This usually takes under a minute, but can take longer." />
+            {confirmed?.steps && liveFeedback.length > 0 && (
+              <div className="flex w-full flex-col gap-2 text-left">
+                {confirmed.steps.map((_, i) => {
+                  const fb = liveFeedback.find((f) => f.stepIndex === i);
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 rounded-md border border-hairline-soft bg-surface-soft px-3 py-2 text-sm"
+                    >
+                      <div className="flex w-5 justify-center">
+                        {fb && <StepMark status={fb.status} delayMs={0} />}
+                      </div>
+                      <span className="text-ink-muted">
+                        Step {i + 1}
+                        {fb ? ` — ${fb.status.replace("_", " ")}` : "…"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
         )}
 
