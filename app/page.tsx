@@ -634,7 +634,7 @@ export default function Home() {
   if (screen === "landing") {
     return (
       <Screen screenKey="landing">
-        <LandingHero onStart={() => setScreen("upload")} />
+        <LandingHero onStart={() => setScreen("upload")} onStartTyped={startTyped} />
         <HistoryList />
         <p className="pb-10 text-center text-sm text-ink-muted">
           Teaching a class?{" "}
