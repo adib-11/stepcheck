@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import ImageUpload, { type UploadedImage } from "@/components/ImageUpload";
@@ -154,12 +154,50 @@ export default function Home() {
   // index, "all" for "I think it's all correct", or null for no bet placed.
   const [prediction, setPrediction] = useState<number | "all" | null>(null);
 
+  // Ref, not state: runResult's closure must see the value set by the
+  // "ping me" button mid-flight, after the closure was created.
+  const notifyRef = useRef(false);
+  const [notifyStatus, setNotifyStatus] = useState<"idle" | "on" | "denied">("idle");
+
   const [chat, setChat] = useState<ChatTurn[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isAsking, setIsAsking] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
 
   const stage = analysis || solved || resultError || hints ? 3 : transcribeResult ? 2 : 1;
+
+  async function enableNotify() {
+    if (!("Notification" in window)) return;
+    const permission = await Notification.requestPermission();
+    notifyRef.current = permission === "granted";
+    setNotifyStatus(permission === "granted" ? "on" : "denied");
+  }
+
+  // Browser notification + tab title flip for students who tabbed away
+  // during the multi-minute wait. Title resets when they return.
+  function announceDone(body: string) {
+    document.title = "✓ Marked — StepCheck";
+    const reset = () => {
+      if (document.visibilityState === "visible") {
+        document.title = "StepCheck";
+        document.removeEventListener("visibilitychange", reset);
+      }
+    };
+    document.addEventListener("visibilitychange", reset);
+    if (document.visibilityState === "visible") document.title = "StepCheck";
+    if (
+      notifyRef.current &&
+      document.visibilityState === "hidden" &&
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+      new Notification("StepCheck", { body });
+    }
+  }
+
+  useEffect(() => {
+    if (isWorking || isHinting) document.title = "Marking… — StepCheck";
+  }, [isWorking, isHinting]);
 
   async function transcribe() {
     if (!image) return;
@@ -273,6 +311,11 @@ export default function Home() {
         const streamed = await streamAnalyze(problemToUse, stepsToUse).catch(() => null);
         if (streamed) {
           setAnalysis(streamed);
+          announceDone(
+            streamed.isCorrect
+              ? "Marked: every step holds up."
+              : `Marked: first slip at step ${(streamed.firstErrorStepIndex ?? 0) + 1}.`
+          );
           saveDuration({ kind: "analyze", stepCount: stepsToUse.length, ms: Date.now() - startedAt });
           saveHistoryEntry({
             at: Date.now(),
@@ -295,9 +338,15 @@ export default function Home() {
           const data = await res.json();
           if (!res.ok) {
             setResultError({ message: data.error ?? "Analysis failed.", raw: data.raw });
+            announceDone("StepCheck hit a problem — tap to retry.");
             return;
           }
           setAnalysis(data);
+          announceDone(
+            data.isCorrect
+              ? "Marked: every step holds up."
+              : `Marked: first slip at step ${(data.firstErrorStepIndex ?? 0) + 1}.`
+          );
           saveDuration({ kind: "analyze", stepCount: stepsToUse.length, ms: Date.now() - startedAt });
           saveHistoryEntry({
             at: Date.now(),
@@ -312,6 +361,7 @@ export default function Home() {
         const streamed = await streamSolve(problemToUse).catch(() => null);
         if (streamed) {
           setSolved(streamed);
+          announceDone("Solved — your worked solution is ready.");
           saveDuration({ kind: "solve", stepCount: 0, ms: Date.now() - startedAt });
           saveHistoryEntry({
             at: Date.now(),
@@ -330,9 +380,11 @@ export default function Home() {
           const data = await res.json();
           if (!res.ok) {
             setResultError({ message: data.error ?? "Solving failed.", raw: data.raw });
+            announceDone("StepCheck hit a problem — tap to retry.");
             return;
           }
           setSolved(data);
+          announceDone("Solved — your worked solution is ready.");
           saveDuration({ kind: "solve", stepCount: 0, ms: Date.now() - startedAt });
           saveHistoryEntry({
             at: Date.now(),
@@ -345,6 +397,7 @@ export default function Home() {
       }
     } catch {
       setResultError({ message: "Network error: could not reach the API." });
+      announceDone("StepCheck hit a problem — tap to retry.");
     } finally {
       setIsWorking(false);
     }
@@ -372,6 +425,7 @@ export default function Home() {
         return;
       }
       setHints(data.hints);
+      announceDone("Your hints are ready.");
     } catch {
       setResultError({ message: "Network error: could not reach the hints API." });
     } finally {
@@ -972,6 +1026,16 @@ export default function Home() {
               kind={confirmed?.steps ? "analyze" : "solve"}
               stepCount={confirmed?.steps?.length ?? 0}
             />
+            {"Notification" in globalThis && notifyStatus === "idle" && (
+              <Button variant="ghost" size="sm" onClick={enableNotify}>
+                Ping me when it&apos;s done — feel free to switch tabs
+              </Button>
+            )}
+            {notifyStatus === "on" && (
+              <p className="text-xs text-ink-muted">
+                You&apos;ll get a notification when the marking is done.
+              </p>
+            )}
             {confirmed?.steps && prediction === null && (
               <div className="flex w-full flex-col gap-2 rounded-md border-2 border-ink bg-brand-soft/20 p-4 text-left">
                 <p className="text-sm font-medium text-ink">
