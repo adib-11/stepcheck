@@ -34,6 +34,7 @@ interface AnalysisResult {
   firstErrorStepIndex: number | null;
   stepByStepFeedback: StepFeedback[];
   misconceptionSummary: string | null;
+  misconceptionTag: string | null;
   correctContinuation: string | null;
   correctContinuationExplanation: string | null;
 }
@@ -186,6 +187,7 @@ export default function Home() {
           problemLatex: problemToUse,
           outcome: data.isCorrect ? "correct" : "incorrect",
           misconceptionSummary: data.misconceptionSummary,
+          misconceptionTag: data.misconceptionTag ?? null,
         });
       } else {
         const res = await fetch("/api/solve", {

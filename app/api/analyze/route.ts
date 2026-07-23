@@ -64,13 +64,18 @@ exactly this shape:
     { "stepIndex": number, "status": "correct" | "incorrect" | "not_reached", "explanation": string }
   ],
   "misconceptionSummary": string | null,
+  "misconceptionTag": string | null,
   "correctContinuation": string | null,
   "correctContinuationExplanation": string | null
 }
 
+misconceptionTag is a SHORT lowercase label of 2-4 plain words naming the
+skill behind the error, reusable across problems — like "sign distribution",
+"fraction addition", or "chain rule". No LaTeX, no punctuation.
+
 stepByStepFeedback must have exactly one entry per student step, in order.
-misconceptionSummary, correctContinuation, and correctContinuationExplanation
-must be null when isCorrect is true.`;
+misconceptionSummary, misconceptionTag, correctContinuation, and
+correctContinuationExplanation must be null when isCorrect is true.`;
 
 interface StepFeedback {
   stepIndex: number;
@@ -83,6 +88,7 @@ interface AnalysisResult {
   firstErrorStepIndex: number | null;
   stepByStepFeedback: StepFeedback[];
   misconceptionSummary: string | null;
+  misconceptionTag: string | null;
   correctContinuation: string | null;
   correctContinuationExplanation: string | null;
 }
@@ -108,6 +114,7 @@ function isAnalysisResult(value: unknown, stepCount: number): value is AnalysisR
     v.stepByStepFeedback.length === stepCount &&
     v.stepByStepFeedback.every(isStepFeedback) &&
     (v.misconceptionSummary === null || typeof v.misconceptionSummary === "string") &&
+    (v.misconceptionTag === null || typeof v.misconceptionTag === "string") &&
     (v.correctContinuation === null || typeof v.correctContinuation === "string") &&
     (v.correctContinuationExplanation === null ||
       typeof v.correctContinuationExplanation === "string")
