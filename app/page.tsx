@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import ImageUpload, { type UploadedImage } from "@/components/ImageUpload";
 import StepMark from "@/components/StepMark";
 import LoadingNote from "@/components/LoadingNote";
+import StagedStatus from "@/components/StagedStatus";
 import Screen from "@/components/Screen";
 import LandingHero from "@/components/LandingHero";
 
@@ -370,6 +371,10 @@ export default function Home() {
               <Button onClick={() => runResult(problem, steps)} disabled={isWorking || !problem}>
                 {isWorking ? "Working\u2026" : "Confirm"}
               </Button>
+              <p className="text-xs text-ink-muted">
+                Checking usually takes 1-2 minutes -- Gemma solves the whole
+                problem itself before marking anything.
+              </p>
               {isWorking && (
                 <LoadingNote
                   label={
@@ -413,9 +418,7 @@ export default function Home() {
               ))}
             </div>
             <div>
-              <p className="font-display text-xl font-semibold tracking-tight text-ink">
-                {confirmed?.steps ? "Marking your solution\u2026" : "Solving your problem\u2026"}
-              </p>
+              <StagedStatus mode={confirmed?.steps ? "analyze" : "solve"} />
               <p className="mt-1 text-sm text-ink-muted">
                 {confirmed?.steps
                   ? "Gemma is working through your steps line by line, like a marker would."
