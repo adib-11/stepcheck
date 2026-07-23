@@ -1,6 +1,6 @@
 import { GoogleGenAI, createPartFromBase64, createUserContent } from "@google/genai";
 import { NextResponse } from "next/server";
-import { generateWithRetry, stripFences } from "@/lib/gemini";
+import { generateJson } from "@/lib/gemini";
 
 export const runtime = "nodejs";
 // Same rationale as /api/analyze and /api/solve: any route calling Gemma
@@ -82,12 +82,13 @@ export async function POST(request: Request) {
     );
   }
 
-  let raw: string;
+  let outcome;
   try {
     const ai = new GoogleGenAI({ apiKey });
-    raw = await generateWithRetry(
+    outcome = await generateJson(
       ai,
-      createUserContent([createPartFromBase64(imageBase64, mimeType), INSTRUCTION])
+      createUserContent([createPartFromBase64(imageBase64, mimeType), INSTRUCTION]),
+      isTranscribeResult
     );
   } catch (error) {
     const message =
@@ -95,22 +96,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(stripFences(raw));
-  } catch {
+  if (!outcome.ok) {
     return NextResponse.json(
-      { error: "Gemma's response could not be parsed as JSON.", raw },
+      {
+        error: "Gemma's response wasn't valid transcription JSON, even after retrying.",
+        raw: outcome.raw,
+      },
       { status: 502 }
     );
   }
-
-  if (!isTranscribeResult(parsed)) {
-    return NextResponse.json(
-      { error: "Gemma's response did not match the expected transcription shape.", raw },
-      { status: 502 }
-    );
-  }
-
-  return NextResponse.json(parsed);
+  return NextResponse.json(outcome.value);
 }

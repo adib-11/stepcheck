@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
-import { generateWithRetry, stripFences, warnIfLooksLikeLatex } from "@/lib/gemini";
+import { generateJson, warnIfLooksLikeLatex } from "@/lib/gemini";
 
 export const runtime = "nodejs";
 // Same rationale as /api/analyze: solve() hits the same model with similar
@@ -100,32 +100,26 @@ export async function POST(request: Request) {
 
   const prompt = `${INSTRUCTION}\n\nProblem statement (LaTeX):\n${problemStatementLatex}`;
 
-  let raw: string;
+  let outcome;
   try {
     const ai = new GoogleGenAI({ apiKey });
-    raw = await generateWithRetry(ai, prompt);
+    outcome = await generateJson(ai, prompt, isSolveResult);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown error calling the Gemma API.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(stripFences(raw));
-  } catch {
+  if (!outcome.ok) {
     return NextResponse.json(
-      { error: "Gemma's response could not be parsed as JSON.", raw },
+      {
+        error: "Gemma's response wasn't valid solve JSON, even after retrying.",
+        raw: outcome.raw,
+      },
       { status: 502 }
     );
   }
-
-  if (!isSolveResult(parsed)) {
-    return NextResponse.json(
-      { error: "Gemma's response did not match the expected solve shape.", raw },
-      { status: 502 }
-    );
-  }
+  const parsed = outcome.value;
 
   parsed.steps.forEach((step) =>
     warnIfLooksLikeLatex(`steps[${step.stepIndex}].explanation`, step.explanation)

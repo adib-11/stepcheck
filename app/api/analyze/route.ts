@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
-import { generateWithRetry, stripFences, warnIfLooksLikeLatex } from "@/lib/gemini";
+import { generateJson, warnIfLooksLikeLatex } from "@/lib/gemini";
 
 export const runtime = "nodejs";
 // Gemma can legitimately take 60-150s+ on multi-step problems (confirmed by
@@ -145,38 +145,28 @@ ${problemStatementLatex}
 Student's confirmed steps (LaTeX), 0-based index per line:
 ${confirmedSteps.map((step: string, i: number) => `${i}: ${step}`).join("\n")}`;
 
-  let raw: string;
+  let outcome;
   try {
     const ai = new GoogleGenAI({ apiKey });
-    raw = await generateWithRetry(ai, prompt);
+    outcome = await generateJson(ai, prompt, (v): v is AnalysisResult =>
+      isAnalysisResult(v, confirmedSteps.length)
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unknown error calling the Gemma API.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(stripFences(raw));
-  } catch {
+  if (!outcome.ok) {
     return NextResponse.json(
       {
-        error: "Gemma's response could not be parsed as JSON.",
-        raw,
+        error: "Gemma's response wasn't valid analysis JSON, even after retrying.",
+        raw: outcome.raw,
       },
       { status: 502 }
     );
   }
-
-  if (!isAnalysisResult(parsed, confirmedSteps.length)) {
-    return NextResponse.json(
-      {
-        error: "Gemma's response did not match the expected analysis shape.",
-        raw,
-      },
-      { status: 502 }
-    );
-  }
+  const parsed = outcome.value;
 
   parsed.stepByStepFeedback.forEach((fb) =>
     warnIfLooksLikeLatex(`stepByStepFeedback[${fb.stepIndex}].explanation`, fb.explanation)
