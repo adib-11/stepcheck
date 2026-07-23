@@ -62,9 +62,7 @@ async function main() {
       results.push({
         file,
         status,
-        hasWorkedSolution: body.hasWorkedSolution,
-        problemStatementLatex: body.problemStatementLatex,
-        solutionSteps: body.hasWorkedSolution ? body.solutionSteps : null,
+        problems: body.problems,
       });
     } else {
       results.push({

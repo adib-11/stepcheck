@@ -65,7 +65,7 @@ interface ApiErrorState {
   raw?: string;
 }
 
-type TranscribeResult =
+type TranscribeItem =
   | { hasWorkedSolution: false; problemStatementLatex: string }
   | { hasWorkedSolution: true; problemStatementLatex: string; solutionSteps: string[] };
 
@@ -95,7 +95,11 @@ export default function Home() {
   const [image, setImage] = useState<UploadedImage | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
-  const [transcribeResult, setTranscribeResult] = useState<TranscribeResult | null>(null);
+  const [transcribeResult, setTranscribeResult] = useState<TranscribeItem | null>(null);
+
+  // Worksheet queue: every problem found in the photo, walked one at a time.
+  const [queue, setQueue] = useState<TranscribeItem[]>([]);
+  const [queueIndex, setQueueIndex] = useState(0);
 
   // Editable copies shown on the confirm screen. `steps` is null when the
   // photo had no worked solution — the confirm UI adapts to whichever
@@ -153,11 +157,9 @@ export default function Home() {
         return;
       }
 
-      const result = data as TranscribeResult;
-      setTranscribeResult(result);
-      setProblem(result.problemStatementLatex);
-      setSteps(result.hasWorkedSolution ? result.solutionSteps : null);
-      setScreen("confirm");
+      const result = data as { problems: TranscribeItem[] };
+      setQueue(result.problems);
+      loadQueueItem(result.problems, 0);
     } catch {
       setTranscribeError("Network error: could not reach the transcribe API.");
     } finally {
@@ -165,10 +167,35 @@ export default function Home() {
     }
   }
 
+  // Loads one worksheet problem into the confirm screen, clearing all
+  // per-problem result state but keeping the queue itself.
+  function loadQueueItem(items: TranscribeItem[], index: number) {
+    const item = items[index];
+    setQueueIndex(index);
+    setTranscribeResult(item);
+    setProblem(item.problemStatementLatex);
+    setSteps(item.hasWorkedSolution ? item.solutionSteps : null);
+    setConfirmed(null);
+    setAnalysis(null);
+    setSolved(null);
+    setResultError(null);
+    setHints(null);
+    setHintsShown(1);
+    setPractice(null);
+    setPracticeError(null);
+    setChat([]);
+    setChatInput("");
+    setChatError(null);
+    setFixLatex(null);
+    setScreen("confirm");
+  }
+
   // Type-it-in path: skip /api/transcribe entirely by seeding the confirm
   // screen with an empty synthetic "no worked solution" transcription.
   function startTyped() {
     setImage(null);
+    setQueue([]);
+    setQueueIndex(0);
     setTranscribeError(null);
     setTranscribeResult({ hasWorkedSolution: false, problemStatementLatex: "" });
     setProblem("");
@@ -355,6 +382,8 @@ export default function Home() {
 
   function startOver() {
     setImage(null);
+    setQueue([]);
+    setQueueIndex(0);
     setTranscribeResult(null);
     setTranscribeError(null);
     setProblem("");
@@ -510,6 +539,11 @@ export default function Home() {
           {transcribeResult && (
             <section className="flex flex-col gap-5 rounded-lg border border-hairline bg-white p-6">
               <div>
+                {queue.length > 1 && (
+                  <span className="mb-2 inline-block rounded-full border border-hairline bg-white px-3 py-1 text-xs font-medium text-ink-muted">
+                    Problem {queueIndex + 1} of {queue.length}
+                  </span>
+                )}
                 <h2 className="font-display text-xl font-semibold tracking-tight text-ink">
                   {image ? "Page 2 — Confirm what was read" : "Type your problem"}
                 </h2>
@@ -719,9 +753,16 @@ export default function Home() {
               </div>
             </div>
 
-            <Button variant="outline" size="sm" onClick={startOver} className="self-start">
-              Check another problem
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {queueIndex < queue.length - 1 && (
+                <Button size="sm" onClick={() => loadQueueItem(queue, queueIndex + 1)}>
+                  Next problem ({queueIndex + 2} of {queue.length})
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={startOver}>
+                Check another problem
+              </Button>
+            </div>
           </section>
         )}
 
@@ -909,9 +950,16 @@ export default function Home() {
               </div>
             )}
 
-            <Button variant="outline" size="sm" onClick={startOver} className="self-start">
-              Check another problem
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {queueIndex < queue.length - 1 && (
+                <Button size="sm" onClick={() => loadQueueItem(queue, queueIndex + 1)}>
+                  Next problem ({queueIndex + 2} of {queue.length})
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={startOver}>
+                Check another problem
+              </Button>
+            </div>
           </section>
         )}
 
