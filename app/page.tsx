@@ -98,6 +98,10 @@ export default function Home() {
   const [solved, setSolved] = useState<SolveResult | null>(null);
   const [resultError, setResultError] = useState<ApiErrorState | null>(null);
 
+  // Latest edit of the first wrong step, results-screen fix box. Null =
+  // untouched, fall back to the step's confirmed LaTeX.
+  const [fixLatex, setFixLatex] = useState<string | null>(null);
+
   const stage = analysis || solved || resultError ? 3 : transcribeResult ? 2 : 1;
 
   async function transcribe() {
@@ -145,6 +149,7 @@ export default function Home() {
     setResultError(null);
     setAnalysis(null);
     setSolved(null);
+    setFixLatex(null);
     setScreen("results");
 
     try {
@@ -202,6 +207,7 @@ export default function Home() {
     setAnalysis(null);
     setSolved(null);
     setResultError(null);
+    setFixLatex(null);
     setScreen("landing");
   }
 
@@ -574,6 +580,36 @@ export default function Home() {
                   <p className="mt-1 text-ink-muted">
                     {analysis.correctContinuationExplanation}
                   </p>
+                </div>
+                <div>
+                  <p className="font-medium text-ink">Fix it and re-check</p>
+                  <p className="mt-1 text-ink-muted">
+                    Edit step {(analysis.firstErrorStepIndex ?? 0) + 1} below and
+                    Gemma will mark your whole solution again.
+                  </p>
+                  <div className="mt-2 rounded-md border border-hairline-soft bg-white px-3 py-2">
+                    <MathInput
+                      key={`fix-${analysis.firstErrorStepIndex}`}
+                      defaultValue={confirmed.steps[analysis.firstErrorStepIndex ?? 0]}
+                      onChange={setFixLatex}
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    className="mt-2"
+                    disabled={isWorking}
+                    onClick={() => {
+                      const idx = analysis.firstErrorStepIndex ?? 0;
+                      const next = [...confirmed.steps!];
+                      next[idx] = fixLatex ?? next[idx];
+                      // Keep the confirm screen's editable copies in sync so
+                      // goBack() shows the fixed step, not the stale one.
+                      setSteps(next);
+                      runResult(confirmed.problem, next);
+                    }}
+                  >
+                    Re-check my fix
+                  </Button>
                 </div>
               </div>
             )}
