@@ -146,6 +146,9 @@ export default function Home() {
   // inside the loading card while the rest is still generating.
   const [liveFeedback, setLiveFeedback] = useState<StepFeedback[]>([]);
 
+  // Solve steps that have arrived so far over the solve stream.
+  const [liveSolveSteps, setLiveSolveSteps] = useState<SolveStep[]>([]);
+
   const [chat, setChat] = useState<ChatTurn[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isAsking, setIsAsking] = useState(false);
@@ -210,6 +213,7 @@ export default function Home() {
     setExplainText("");
     setExplainFeedback(null);
     setLiveFeedback([]);
+    setLiveSolveSteps([]);
     setScreen("confirm");
   }
 
@@ -253,6 +257,7 @@ export default function Home() {
     setChatInput("");
     setChatError(null);
     setLiveFeedback([]);
+    setLiveSolveSteps([]);
     setScreen("results");
 
     const startedAt = Date.now();
@@ -297,25 +302,39 @@ export default function Home() {
           });
         }
       } else {
-        const res = await fetch("/api/solve", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ problemStatementLatex: problemToUse }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setResultError({ message: data.error ?? "Solving failed.", raw: data.raw });
-          return;
+        const streamed = await streamSolve(problemToUse).catch(() => null);
+        if (streamed) {
+          setSolved(streamed);
+          saveDuration({ kind: "solve", stepCount: 0, ms: Date.now() - startedAt });
+          saveHistoryEntry({
+            at: Date.now(),
+            problemLatex: latex,
+            problemText: text,
+            outcome: "solved",
+            misconceptionSummary: null,
+          });
+        } else {
+          setLiveSolveSteps([]);
+          const res = await fetch("/api/solve", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ problemStatementLatex: problemToUse }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setResultError({ message: data.error ?? "Solving failed.", raw: data.raw });
+            return;
+          }
+          setSolved(data);
+          saveDuration({ kind: "solve", stepCount: 0, ms: Date.now() - startedAt });
+          saveHistoryEntry({
+            at: Date.now(),
+            problemLatex: latex,
+            problemText: text,
+            outcome: "solved",
+            misconceptionSummary: null,
+          });
         }
-        setSolved(data);
-        saveDuration({ kind: "solve", stepCount: 0, ms: Date.now() - startedAt });
-        saveHistoryEntry({
-          at: Date.now(),
-          problemLatex: latex,
-          problemText: text,
-          outcome: "solved",
-          misconceptionSummary: null,
-        });
       }
     } catch {
       setResultError({ message: "Network error: could not reach the API." });
@@ -433,6 +452,61 @@ export default function Home() {
       correctContinuation: fin.correctContinuation as string | null,
       correctContinuationExplanation: fin.correctContinuationExplanation as string | null,
     };
+  }
+
+  // Returns a full SolveResult if the stream produced a complete, valid
+  // solution; null on ANY shortfall — the caller then falls back to the
+  // classic /api/solve, which has retries and JSON salvage.
+  async function streamSolve(problemToUse: string): Promise<SolveResult | null> {
+    const res = await fetch("/api/solve-stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ problemStatementLatex: problemToUse }),
+    });
+    if (!res.ok || !res.body) return null;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    const steps: SolveStep[] = [];
+    let finalLine: Record<string, unknown> | null = null;
+
+    const handleLine = (line: string) => {
+      const t = line.trim().replace(/^```(?:json)?|```$/g, "").trim();
+      if (!t) return;
+      try {
+        const obj = JSON.parse(t);
+        if (
+          obj &&
+          typeof obj.stepIndex === "number" &&
+          typeof obj.workLatex === "string" &&
+          typeof obj.explanation === "string"
+        ) {
+          steps.push(obj);
+          setLiveSolveSteps([...steps]);
+        } else if (obj && obj.final === true) {
+          finalLine = obj;
+        }
+      } catch {
+        // Partial or junk line — ignore; completeness is checked at the end.
+      }
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      lines.forEach(handleLine);
+    }
+    // The stream usually ends WITHOUT a trailing newline — flush the buffer.
+    handleLine(buffer + decoder.decode());
+
+    const fin = finalLine as Record<string, unknown> | null;
+    if (!fin || steps.length === 0 || typeof fin.finalAnswerLatex !== "string") return null;
+
+    return { steps, finalAnswerLatex: fin.finalAnswerLatex as string };
   }
 
   async function fetchPractice() {
@@ -567,6 +641,7 @@ export default function Home() {
     setChatInput("");
     setChatError(null);
     setLiveFeedback([]);
+    setLiveSolveSteps([]);
     setScreen("landing");
   }
 
@@ -907,6 +982,22 @@ export default function Home() {
                     />
                   );
                 })}
+              </div>
+            )}
+            {!confirmed?.steps && liveSolveSteps.length > 0 && (
+              <div className="flex w-full flex-col gap-3 text-left">
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">
+                  Working the solution — {liveSolveSteps.length} steps so far
+                </p>
+                {liveSolveSteps.map((step) => (
+                  <div key={step.stepIndex} className="rounded-md border border-hairline-soft bg-surface-soft p-4 text-sm">
+                    <p className="font-medium text-ink">Step {step.stepIndex + 1}</p>
+                    <div className="mt-1 rounded-md border border-hairline-soft bg-white px-3 py-2">
+                      <MathView latex={step.workLatex} />
+                    </div>
+                    <p className="mt-1 text-ink-muted">{step.explanation}</p>
+                  </div>
+                ))}
               </div>
             )}
           </section>
