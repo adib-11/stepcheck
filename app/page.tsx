@@ -4,13 +4,13 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import ImageUpload, { type UploadedImage } from "@/components/ImageUpload";
-import StepMark from "@/components/StepMark";
 import LoadingNote from "@/components/LoadingNote";
 import StagedStatus from "@/components/StagedStatus";
 import Screen from "@/components/Screen";
 import LandingHero from "@/components/LandingHero";
 import HistoryList from "@/components/HistoryList";
 import WaitProgress from "@/components/WaitProgress";
+import MarkedStep from "@/components/MarkedStep";
 import { saveHistoryEntry } from "@/lib/history";
 import { saveDuration } from "@/lib/durations";
 import { composeProblem } from "@/lib/problem";
@@ -889,23 +889,22 @@ export default function Home() {
               kind={confirmed?.steps ? "analyze" : "solve"}
               stepCount={confirmed?.steps?.length ?? 0}
             />
-            {confirmed?.steps && liveFeedback.length > 0 && (
-              <div className="flex w-full flex-col gap-2 text-left">
-                {confirmed.steps.map((_, i) => {
+            {confirmed?.steps && (
+              <div className="flex w-full flex-col gap-3 text-left">
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">
+                  Marking your page — {liveFeedback.length} of {confirmed.steps.length} steps checked
+                </p>
+                {confirmed.steps.map((stepLatex, i) => {
                   const fb = liveFeedback.find((f) => f.stepIndex === i);
                   return (
-                    <div
+                    <MarkedStep
                       key={i}
-                      className="flex items-center gap-3 rounded-md border border-hairline-soft bg-surface-soft px-3 py-2 text-sm"
-                    >
-                      <div className="flex w-5 justify-center">
-                        {fb && <StepMark status={fb.status} delayMs={0} />}
-                      </div>
-                      <span className="text-ink-muted">
-                        Step {i + 1}
-                        {fb ? ` — ${fb.status.replace("_", " ")}` : "…"}
-                      </span>
-                    </div>
+                      index={i}
+                      latex={stepLatex}
+                      status={fb?.status}
+                      explanation={fb?.explanation}
+                      delayMs={0}
+                    />
                   );
                 })}
               </div>
@@ -1064,24 +1063,14 @@ export default function Home() {
               {confirmed.steps.map((stepLatex, i) => {
                 const fb = analysis.stepByStepFeedback.find((f) => f.stepIndex === i);
                 return (
-                  <div
-                    key={i}
-                    className="screen-transition flex gap-3 rounded-md border border-hairline-soft bg-surface-soft p-4 text-sm"
-                    style={{ animationDelay: `${i * 80}ms` }}
-                  >
-                    <div className="flex w-5 flex-shrink-0 justify-center border-r border-hairline pr-3">
-                      {fb && <StepMark status={fb.status} delayMs={i * 120} />}
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="font-medium text-ink">
-                        Step {i + 1}
-                        {fb ? ` — ${fb.status.replace("_", " ")}` : ""}
-                      </p>
-                      <div className="rounded-md border border-hairline-soft bg-white px-3 py-2 text-ink">
-                        <MathView latex={stepLatex} />
-                      </div>
-                      {fb && <p className="text-ink-muted">{fb.explanation}</p>}
-                    </div>
+                  <div key={i} className="screen-transition" style={{ animationDelay: `${i * 80}ms` }}>
+                    <MarkedStep
+                      index={i}
+                      latex={stepLatex}
+                      status={fb?.status}
+                      explanation={fb?.explanation}
+                      delayMs={i * 120}
+                    />
                   </div>
                 );
               })}
