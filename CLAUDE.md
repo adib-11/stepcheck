@@ -37,12 +37,17 @@ one client component — there is no router-based navigation between screens,
 and no state is cleared by `goBack()` so moving backward and forward again
 never re-fetches.
 
-**Three Gemma calls, one per API route, each independently validated:**
+**Core Gemma calls, one per API route, each independently validated:**
 
-- `POST /api/transcribe` — vision call: OCRs the photo into LaTeX and
-  classifies whether it also contains a handwritten worked solution. Returns
-  a discriminated union (`hasWorkedSolution: true | false`) that determines
-  which of the next two routes gets used.
+- `POST /api/transcribe` — vision call: OCRs the photo and classifies
+  whether it also contains a handwritten worked solution. Each problem comes
+  back SPLIT into `problemText` (plain prose, no LaTeX, no problem number)
+  and `problemLatex` (math only, may be `""`), as a discriminated union on
+  `hasWorkedSolution: true | false` that determines which of the next two
+  routes gets used. Downstream routes still take ONE composed
+  `problemStatementLatex` string — the client joins the halves with
+  `composeProblem` (`lib/problem.ts`), so the split never ripples past the
+  transcribe route and the confirm UI (textarea + MathInput pair).
 - `POST /api/analyze` — given a problem + the student's *confirmed* steps,
   Gemma solves the problem independently first, then compares step by step,
   returning `correct | incorrect | not_reached` per step (everything after
@@ -53,6 +58,20 @@ never re-fetches.
   framed as a verdict on the student's work (no correct/incorrect banner, no
   `StepMark` in the UI).
 
+**Streaming variants:** `/api/analyze-stream` and `/api/solve-stream` emit
+NDJSON (one step object per line, then a `{"final": true, …}` line) from the
+same single Gemma call, so the loading card can assemble the marked page /
+worked solution live during the 60–300s wait. The client (`streamAnalyze` /
+`streamSolve` in `app/page.tsx`) returns null on ANY shortfall and falls back
+to the classic route, which has retries and JSON salvage — the stream routes
+deliberately have neither.
+
+**Waiting experience** (all client-side, zero extra Gemma calls): live
+streamed step marks (`MarkedStep`), a first-slip prediction bet placed during
+the wait, `WaitProgress` (elapsed timer vs. a device-calibrated median from
+`lib/durations.ts`, bar capped at 92%), `WaitReview` (recent slips from
+localStorage history), and opt-in done-notifications + tab-title status.
+
 Each route: builds a single large instruction prompt, calls
 `generateWithRetry` (in `lib/gemini.ts` — retries on 5xx/undefined status,
 not on other errors), strips markdown fences with `stripFences`, `JSON.parse`s
@@ -62,7 +81,8 @@ Gemma's JSON is never trusted structurally, only after the guard passes. A
 malformed/unparseable response returns HTTP 502 with the raw text attached so
 the UI can show it in a "Raw model output" `<details>` block.
 
-All three routes set `export const maxDuration = 180` — Gemma responses on
+All Gemma-calling routes (including both stream routes) set
+`export const maxDuration = 180` — Gemma responses on
 multi-step problems routinely take 60–150s+, well past typical serverless
 defaults, so this must stay set on every route that calls Gemma or requests
 will be killed mid-flight and surface as a 502.
@@ -82,14 +102,16 @@ touches the DOM via custom elements on import and must be client-only
 
 **`components/StepMark.tsx`** draws the tick/cross marking-rail glyph next to
 each graded step, staggered via a `delayMs` prop (`i * 120`ms) so results
-reveal top-to-bottom like a marker's pen — the one deliberate animation in
-the app (see DESIGN.md §5). Don't add hover/load/scroll animation elsewhere;
-it's an explicit design constraint, not an oversight.
+reveal top-to-bottom like a marker's pen — the signature animation. General
+motion (entry, cascades, hover, button press) follows DESIGN.md §5; don't
+add motion outside those patterns.
 
 ## Design system
 
-See [DESIGN.md](DESIGN.md). The app uses the Mintlify design system:
-white canvas, hairline borders, black pill buttons, mint-green accent.
+See [DESIGN.md](DESIGN.md). The app uses a neobrutalist system in the
+FlyRank palette: white cards on whitesmoke canvas, 2px dark-teal ink
+borders (`#001820` — never pure black), hard offset shadows
+(`shadow-brut*`, no blur), boxy `rounded-lg` buttons, mint-green accent.
 
 - Colors are semantic tokens (`surface`, `hairline`, `ink`, `ink-muted`,
   `brand`, `mark-correct`, `mark-error`, `mark-flag`) defined in
@@ -97,11 +119,19 @@ white canvas, hairline borders, black pill buttons, mint-green accent.
   hex or generic Tailwind palette colors (`text-blue-600`).
 - Fonts: Inter for all UI prose and headings (`font-display` and
   `font-body` both resolve to it), Geist Mono (self-hosted in
-  `app/fonts`) for code/raw LaTeX/JSON only. No third typeface.
-- All buttons are pills (`rounded-full`); cards 12px, inputs 8px radius.
-- `brand` mint is accent-only (CTAs, focus ring, active states);
+  `app/fonts`) for code/raw LaTeX/JSON — and for the uppercase
+  letter-spaced caption voice (ticker, card labels, stats captions, wait
+  status lines). No third typeface.
+- Buttons are boxy (`rounded-lg`) with `border-2 border-ink` and a hard
+  offset shadow; cards 8px radius + `shadow-brut`; inner boxes 4px with
+  hairline borders. No gradients. Light mode only.
+- `brand` mint is accent-only (CTAs, focus ring, kicker washes);
   `mark-correct`/`mark-error`/`mark-flag` are reserved for grading
-  semantics — don't repurpose either as generic UI colors.
+  semantics — don't repurpose either as generic UI colors. `mark-error`
+  is the app's only red.
+- Desktop layout: screens live in a `max-w-6xl` shell with `lg:` grids
+  (sticky photo beside fields on confirm; 7/5 marked-page + guidance
+  rail on results). Mobile stays single-column.
 
 ## Import alias
 

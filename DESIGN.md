@@ -1,39 +1,68 @@
-# StepCheck — Design System (Mintlify)
+# StepCheck — Design System (Neobrutalism × FlyRank)
 
-The active design language is the Mintlify system. Canonical token
-reference: `DESIGN-mintlify.md` (source: user-provided design analysis).
-The previous "exam paper + red pen" system (Fraunces, paper/grid palette)
-is retired — do not reintroduce it.
+The active design language is neobrutalism (thick ink borders, hard
+offset shadows, flat fills, boxy buttons — no gradients, no blurs)
+executed in the FlyRank palette (mint accent, dark-teal ink, whitesmoke
+canvas). The previous Mintlify system (pills, hairline-only borders,
+hero gradient) is retired — do not reintroduce it.
 
-## Tokens in this codebase
-
-Semantic Tailwind tokens (`tailwind.config.ts`), never raw hex in
-components:
+## Tokens (`tailwind.config.ts`) — never raw hex in components
 
 | Token | Value | Role |
 |---|---|---|
-| `paper` / `bg-white` | `#ffffff` | Canvas |
-| `surface`, `surface-soft` | `#f7f7f7`, `#fafafa` | Section/card fills |
-| `hairline`, `hairline-soft` | `#e5e5e5`, `#ededed` | Borders/dividers |
-| `ink`, `ink-muted`, `charcoal` | `#0a0a0a`, `#5a5a5c`, `#1c1c1e` | Text |
-| `brand`, `brand-deep`, `brand-soft` | `#00d4a4`, `#00b48a`, `#7cebcb` | Accent CTAs, focus ring, active states ONLY |
+| `bg-white` / `paper` | `#ffffff` | Card fill |
+| `surface`, `surface-soft` | `#f8f8f8`, `#fcfcfc` | Page canvas / inner boxes |
+| `hairline`, `hairline-soft` | `#e5e5e5`, `#ededed` | INNER dividers only — never outer borders |
+| `ink`, `ink-muted`, `charcoal` | `#001820`, `#425153`, `#0c1b1b` | Text, outer borders, shadows / muted text / hover fill |
+| `brand`, `brand-deep`, `brand-soft` | `#50e098`, `#2fbf7b`, `#a9efcb` | Mint accent: CTAs, focus ring, kicker washes, hero shadow |
 | `mark-correct` | `#1ba673` | Tick / correct step |
-| `mark-error` | `#d45656` | Cross / incorrect step |
+| `mark-error` | `#e5484d` | Cross / incorrect step; the app's one red |
 | `mark-flag` | `#c37d0d` | Low-confidence warning |
-| `hero-from` → `hero-to` | `#87a8c8` → `#f5e9d8` | Landing hero gradient only |
+| `shadow-brut`, `shadow-brut-sm` | `4px 4px 0 #001820`, `2px 2px 0` | Hard offset shadows — cards / buttons |
+| `shadow-brut-brand` | `6px 6px 0 #50e098` | Mint shadow — landing hero card only |
 
 ## Rules
 
-- Inter for all prose/headings (weights 400/500/600, tight tracking on
-  headings); Geist Mono for code/LaTeX-source only. No third typeface,
-  no italics.
-- Every button is a pill (`rounded-full`). Cards are 12px
-  (`rounded-lg`), inputs/code 8px (`rounded-md`) — nothing in between.
-- `brand` mint never appears on body text or large fills.
-- `mark-*` colors are reserved for grading semantics.
-- Flat surfaces with hairline borders; the only deep shadow is the
-  landing demo card (hero-product-mockup treatment). The only gradient
-  is the landing hero band.
-- Motion: `mark-in` (staggered tick/cross reveal, 120ms apart) and
-  `screen-in` (screen transitions) are the only animations. Both respect
-  `prefers-reduced-motion`.
+1. Outer cards, sections, buttons, and inputs: `border-2 border-ink`
+   plus a `shadow-brut*`. Inner sub-boxes keep 1px hairline borders.
+   Never pure `#000` — ink `#001820` is the off-black.
+2. Buttons are boxy (`rounded-lg`, 8px), `font-semibold`, bordered and
+   hard-shadowed. Hover lifts (shadow grows); active presses
+   (translate 2px toward the shadow, shadow collapses). Ghost/link are
+   flat. Only tiny non-interactive status badges may be `rounded-full`.
+3. Radius scale: 8px (`rounded-lg`) cards/buttons/inputs, 4px
+   (`rounded-md`) inner boxes. Nothing else.
+4. No gradients, no blurred shadows, no dark mode (light only for now).
+5. `brand` mint is accent-only; `mark-*` colors are reserved for
+   grading semantics; `mark-error` is the only red.
+6. Inter for all prose/headings (400/500/600/700); Geist Mono for
+   code/raw LaTeX only — plus the mono uppercase letter-spaced "caption
+   voice" (`font-mono text-[10-11px] uppercase tracking-[0.12-0.2em]`)
+   used for the landing ticker, card labels, stats captions, and wait
+   status lines. No third typeface.
+
+## Landing structure (MockClub-derived)
+
+Announcement ticker (ink bar, mono caption voice) → nav row (wordmark
+left, links + CTA right) → two-column `lg:` hero: pitch left (kicker
+pill, display headline with a mint highlight bar behind the key phrase,
+paragraph, CTA pair, 3-cell bordered stats strip), hero object right —
+the "marked page" card (mono header row, StepMark step rows, rotated
+verdict stamp badge, ink fine-print footer, carousel dots cycling
+canned demo problems). Desktop screens use `lg:` grids: sticky photo
+beside fields on confirm, 7/5 marked-page + guidance rail on results.
+Mobile stays single-column.
+
+## Motion (§5)
+
+- Entry: fade + translateY(16px → 0), 420ms ease-out
+  (`.screen-transition`); lists cascade with 80ms inline
+  `animationDelay` increments (results steps, history entries).
+- Hover: color/shadow shift over 200ms. Buttons press on active.
+- Signature: StepMark `mark-in` tick/cross reveal, staggered 120ms —
+  keep it the loudest motion on the page. During the analyze wait the
+  same marks stream in live, one per step, as Gemma delivers them.
+- The wait progress bar animates width only (1s linear ticks, capped
+  at 92%).
+- Only `transform`, `opacity`, and colors animate.
+  `prefers-reduced-motion` disables entry animation.
