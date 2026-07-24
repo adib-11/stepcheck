@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
-import { MODEL } from "@/lib/gemini";
+import { MODEL, statusOf } from "@/lib/gemini";
 import { PLAIN_LANGUAGE_RULE } from "@/lib/prompts";
 
 export const runtime = "nodejs";
@@ -60,19 +60,52 @@ export async function POST(request: Request) {
         if (atLineBoundary) controller.enqueue(encoder.encode("\n"));
       }, 10_000);
       try {
-        const response = await ai.models.generateContentStream({
-          model: MODEL,
-          contents: prompt,
-          config: { temperature: 0 },
-        });
-        for await (const chunk of response) {
-          if (chunk.text) {
-            atLineBoundary = chunk.text.endsWith("\n");
-            controller.enqueue(encoder.encode(chunk.text));
+        // Solving can't be split into per-step calls like analyze-stream
+        // (the steps don't exist until Gemma writes them), so runaway
+        // thinking and 503s are handled by retrying INSIDE this response:
+        // safe because the runaway mode produces zero visible output before
+        // the watchdog trips, so nothing partial ever reaches the client,
+        // and heartbeats keep the connection alive across attempts.
+        for (let attempt = 0; ; attempt++) {
+          let sentAnyText = false;
+          try {
+            const response = await ai.models.generateContentStream({
+              model: MODEL,
+              contents: prompt,
+              // No maxOutputTokens: gemma-4's hidden thinking tokens count
+              // against it, risking an empty visible output — see CLAUDE.md.
+              config: { temperature: 0 },
+            });
+            for await (const chunk of response) {
+              if (chunk.text) {
+                sentAnyText = true;
+                atLineBoundary = chunk.text.endsWith("\n");
+                controller.enqueue(encoder.encode(chunk.text));
+              }
+              // Runaway-thinking watchdog: stochastic, so a fresh attempt
+              // usually converges — see CLAUDE.md.
+              const thoughts = chunk.usageMetadata?.thoughtsTokenCount ?? 0;
+              if (!sentAnyText && thoughts > 10_000) {
+                throw new Error(
+                  `Gemma runaway thinking: ${thoughts} thought tokens with no output yet — aborting a doomed attempt.`
+                );
+              }
+            }
+            break;
+          } catch (error) {
+            // Output already sent: retrying would corrupt the NDJSON.
+            if (sentAnyText || attempt >= 2) throw error;
+            const status = statusOf(error);
+            if (!(status === undefined || status >= 500 || status === 429)) throw error;
+            console.warn(`[solve-stream] attempt ${attempt} failed, retrying:`, error);
+            await new Promise((r) => setTimeout(r, 2000 + Math.random() * 2000));
           }
         }
         controller.close();
       } catch (error) {
+        // Headers already went out, so Next still logs this request as a
+        // 200 — this line is the only server-side trace of the failure.
+        console.error("[solve-stream] Gemma stream failed:", error);
         controller.error(error);
       } finally {
         clearInterval(heartbeat);

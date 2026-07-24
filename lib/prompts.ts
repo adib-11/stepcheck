@@ -48,4 +48,8 @@ GOOD (do this instead):
 "the derivative of 2x squared should be 4x (2 times 2x), but the student wrote 2x"
 
 This rule does NOT apply to correctContinuation, which must remain real LaTeX
-since it is rendered in a math input field, not displayed as text.`;
+since it is rendered in a math input field, not displayed as text.
+
+Also CRITICAL: keep every prose field SHORT — one sentence, at most about 20
+words. State only the specific mathematical point; no restating the step, no
+preamble, no encouragement.`;

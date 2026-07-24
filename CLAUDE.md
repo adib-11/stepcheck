@@ -59,12 +59,39 @@ never re-fetches.
   `StepMark` in the UI).
 
 **Streaming variants:** `/api/analyze-stream` and `/api/solve-stream` emit
-NDJSON (one step object per line, then a `{"final": true, …}` line) from the
-same single Gemma call, so the loading card can assemble the marked page /
-worked solution live during the 60–300s wait. The client (`streamAnalyze` /
-`streamSolve` in `app/page.tsx`) returns null on ANY shortfall and falls back
-to the classic route, which has retries and JSON salvage — the stream routes
-deliberately have neither.
+NDJSON (one step object per line, then a `{"final": true, …}` line) so the
+loading card can assemble the marked page / worked solution live during the
+wait. `/api/analyze-stream` is a FAN-OUT: one small Gemma call per step
+(`generateBounded`, concurrency 2, results emitted in index order, early
+abort after the first error, plus one follow-up call for the
+misconception/continuation) — small per-step prompts stay out of the runaway
+mode below, and they retry individually. `/api/solve-stream` can't be split
+(the steps don't exist until Gemma writes them) so it is one call with
+in-response retries, safe because the runaway produces zero output before
+the watchdog trips. The client (`streamAnalyze` / `streamSolve` in
+`app/page.tsx`) salvages repairable streams (deduped/missing step lines
+rebuilt from a valid final line), logs every failure reason to the console
+AND to the error card's "What went wrong (technical)" block via
+`streamDebugRef`, and returns null on genuine shortfall — falling back to
+the classic route (always in dev; in prod only within the 240s give-up).
+
+**Gemma-4 is a thinking model with a stochastic runaway mode.** Hidden
+reasoning (`thoughtsTokenCount` in `usageMetadata`) precedes any visible
+output — the long silent first-token wait IS the thinking, generated at
+~48 tok/s. Successful grading runs think ~7k tokens; failed runs loop until
+the entire 32,768-token output budget is thoughts and the stream ends with
+`finishReason: MAX_TOKENS` and ZERO visible text after ~11 minutes. The same
+prompt at temperature 0 can succeed or run away at different times (it's
+server-side nondeterminism, not prompt-triggered), so retrying is genuinely
+effective. Small focused prompts (single-step checks) think ~300 tokens and
+were reliable even while the full grading prompt ran away 100% of the time —
+that observation is why analyze-stream fans out per step. Consequences baked
+into the code: never set `maxOutputTokens` on these calls (thoughts consume
+it → guaranteed-empty output), `thinkingBudget` is rejected for this model,
+and all streaming Gemma calls watch `thoughtsTokenCount` per chunk
+(`generateBounded` in `lib/gemini.ts` for small calls; solve-stream inline
+at >10k thoughts), aborting doomed calls early for a retry instead of
+waiting ~11 min for the inevitable empty end.
 
 **Waiting experience** (all client-side, zero extra Gemma calls): live
 streamed step marks (`MarkedStep`), a first-slip prediction bet placed during

@@ -67,6 +67,9 @@ interface ChatTurn {
 interface ApiErrorState {
   message: string;
   raw?: string;
+  /** Stream-failure diagnostics (reason + tail of what Gemma sent) shown in
+      a collapsible block so failures are debuggable from the UI. */
+  debug?: string;
 }
 
 type TranscribeItem =
@@ -98,8 +101,11 @@ const STAGE_LABELS = ["Photo", "Confirm", "Result"];
 // by the server's maxDuration=300 (Gemma too slow), not malformed output —
 // the classic non-streaming fallback would hit the same 300s wall with
 // nothing streamed, so skip it and show the error card immediately instead
-// of doubling a hopeless wait.
-const STREAM_GIVE_UP_MS = 240_000;
+// of doubling a hopeless wait. ONLY in production: local dev has no
+// maxDuration wall, so there the classic fallback (with its retries and
+// JSON salvage) can still rescue a slow request and must always run.
+const STREAM_GIVE_UP_MS =
+  process.env.NODE_ENV === "production" ? 240_000 : Number.POSITIVE_INFINITY;
 
 const SLOW_MODEL_MESSAGE =
   "Gemma is responding unusually slowly right now, and the check ran out of time. This is on the model's side, not yours — try again in a few minutes.";
@@ -136,6 +142,9 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [solved, setSolved] = useState<SolveResult | null>(null);
   const [resultError, setResultError] = useState<ApiErrorState | null>(null);
+  // Why the most recent stream attempt returned null (error message + tail of
+  // whatever Gemma actually sent) — shown in the error card's debug block.
+  const streamDebugRef = useRef<string | null>(null);
 
   // Latest edit of the first wrong step, results-screen fix box. Null =
   // untouched, fall back to the step's confirmed LaTeX.
@@ -336,7 +345,10 @@ export default function Home() {
             misconceptionTag: streamed.misconceptionTag ?? null,
           });
         } else if (Date.now() - startedAt > STREAM_GIVE_UP_MS) {
-          setResultError({ message: SLOW_MODEL_MESSAGE });
+          setResultError({
+            message: SLOW_MODEL_MESSAGE,
+            debug: streamDebugRef.current ?? undefined,
+          });
           announceDone("StepCheck hit a problem — tap to retry.");
         } else {
           setLiveFeedback([]);
@@ -350,7 +362,11 @@ export default function Home() {
           });
           const data = await res.json();
           if (!res.ok) {
-            setResultError({ message: data.error ?? "Analysis failed.", raw: data.raw });
+            setResultError({
+              message: data.error ?? "Analysis failed.",
+              raw: data.raw,
+              debug: streamDebugRef.current ?? undefined,
+            });
             announceDone("StepCheck hit a problem — tap to retry.");
             return;
           }
@@ -384,7 +400,10 @@ export default function Home() {
             misconceptionSummary: null,
           });
         } else if (Date.now() - startedAt > STREAM_GIVE_UP_MS) {
-          setResultError({ message: SLOW_MODEL_MESSAGE });
+          setResultError({
+            message: SLOW_MODEL_MESSAGE,
+            debug: streamDebugRef.current ?? undefined,
+          });
           announceDone("StepCheck hit a problem — tap to retry.");
         } else {
           setLiveSolveSteps([]);
@@ -395,7 +414,11 @@ export default function Home() {
           });
           const data = await res.json();
           if (!res.ok) {
-            setResultError({ message: data.error ?? "Solving failed.", raw: data.raw });
+            setResultError({
+              message: data.error ?? "Solving failed.",
+              raw: data.raw,
+              debug: streamDebugRef.current ?? undefined,
+            });
             announceDone("StepCheck hit a problem — tap to retry.");
             return;
           }
@@ -412,7 +435,10 @@ export default function Home() {
         }
       }
     } catch {
-      setResultError({ message: "Network error: could not reach the API." });
+      setResultError({
+        message: "Network error: could not reach the API.",
+        debug: streamDebugRef.current ?? undefined,
+      });
       announceDone("StepCheck hit a problem — tap to retry.");
     } finally {
       setIsWorking(false);
@@ -456,17 +482,38 @@ export default function Home() {
     problemToUse: string,
     stepsToUse: string[]
   ): Promise<AnalysisResult | null> {
-    const res = await fetch("/api/analyze-stream", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ problemStatementLatex: problemToUse, confirmedSteps: stepsToUse }),
-    });
-    if (!res.ok || !res.body) return null;
+    streamDebugRef.current = null;
+    const streamStartedAt = Date.now();
+    let received = "";
+    // Every null return goes through here so the failure is never silent:
+    // logged to the console AND stashed for the error card's debug block.
+    const fail = (reason: string): null => {
+      const detail =
+        `${reason} (after ${Math.round((Date.now() - streamStartedAt) / 1000)}s)\n` +
+        `Tail of Gemma's output:\n${received.trim().slice(-600) || "(nothing received)"}`;
+      streamDebugRef.current = detail;
+      console.warn("[analyze-stream client]", detail);
+      return null;
+    };
+
+    let res: Response;
+    try {
+      res = await fetch("/api/analyze-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ problemStatementLatex: problemToUse, confirmedSteps: stepsToUse }),
+      });
+    } catch (e) {
+      return fail(`Could not reach /api/analyze-stream: ${e instanceof Error ? e.message : e}`);
+    }
+    if (!res.ok || !res.body) return fail(`/api/analyze-stream responded HTTP ${res.status}`);
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    const feedback: StepFeedback[] = [];
+    // Keyed by stepIndex so a duplicated line can't inflate the count and a
+    // missing one is detectable — both get repaired from the final verdict.
+    const byIndex = new Map<number, StepFeedback>();
     let finalLine: Record<string, unknown> | null = null;
 
     const handleLine = (line: string) => {
@@ -480,8 +527,12 @@ export default function Home() {
           (obj.status === "correct" || obj.status === "incorrect" || obj.status === "not_reached") &&
           typeof obj.explanation === "string"
         ) {
-          feedback.push(obj);
-          setLiveFeedback([...feedback]);
+          if (obj.stepIndex >= 0 && obj.stepIndex < stepsToUse.length && !byIndex.has(obj.stepIndex)) {
+            byIndex.set(obj.stepIndex, obj);
+            setLiveFeedback(
+              Array.from(byIndex.values()).sort((a, b) => a.stepIndex - b.stepIndex)
+            );
+          }
         } else if (obj && obj.final === true) {
           finalLine = obj;
         }
@@ -490,13 +541,21 @@ export default function Home() {
       }
     };
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      lines.forEach(handleLine);
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        received += chunk;
+        buffer += chunk;
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        lines.forEach(handleLine);
+      }
+    } catch (e) {
+      // Mid-flight break — usually the server's Gemma call erroring after
+      // headers already went out (the request still logs as a 200).
+      return fail(`Stream broke mid-flight: ${e instanceof Error ? e.message : e}`);
     }
     // The stream usually ends WITHOUT a trailing newline, so the final line
     // is still sitting in the buffer — flush it or the fallback always runs.
@@ -508,7 +567,6 @@ export default function Home() {
 
     if (
       !fin ||
-      feedback.length !== stepsToUse.length ||
       typeof fin.isCorrect !== "boolean" ||
       !(fin.firstErrorStepIndex === null || typeof fin.firstErrorStepIndex === "number") ||
       !(fin.misconceptionSummary === null || typeof fin.misconceptionSummary === "string") ||
@@ -517,12 +575,32 @@ export default function Home() {
       !(fin.correctContinuationExplanation === null ||
         typeof fin.correctContinuationExplanation === "string")
     ) {
-      return null;
+      return fail("Stream ended without a valid final summary line");
     }
+    if (byIndex.size === 0) return fail("Stream had a final line but no step lines");
+
+    // Salvage: with a trusted final verdict, a step line Gemma skipped or
+    // mangled is derivable (before the first error = correct, at it =
+    // incorrect, after = not_reached) — don't throw away minutes of
+    // generation over a countable mismatch.
+    const firstError = fin.firstErrorStepIndex as number | null;
+    const feedback: StepFeedback[] = stepsToUse.map(
+      (_, i) =>
+        byIndex.get(i) ?? {
+          stepIndex: i,
+          status:
+            fin.isCorrect === true || (firstError !== null && i < firstError)
+              ? "correct"
+              : firstError === i
+                ? "incorrect"
+                : "not_reached",
+          explanation: "",
+        }
+    );
 
     return {
       isCorrect: fin.isCorrect as boolean,
-      firstErrorStepIndex: fin.firstErrorStepIndex as number | null,
+      firstErrorStepIndex: firstError,
       stepByStepFeedback: feedback,
       misconceptionSummary: fin.misconceptionSummary as string | null,
       misconceptionTag: fin.misconceptionTag as string | null,
@@ -535,12 +613,31 @@ export default function Home() {
   // solution; null on ANY shortfall — the caller then falls back to the
   // classic /api/solve, which has retries and JSON salvage.
   async function streamSolve(problemToUse: string): Promise<SolveResult | null> {
-    const res = await fetch("/api/solve-stream", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ problemStatementLatex: problemToUse }),
-    });
-    if (!res.ok || !res.body) return null;
+    streamDebugRef.current = null;
+    const streamStartedAt = Date.now();
+    let received = "";
+    // Same contract as streamAnalyze: every null return is logged and
+    // stashed for the error card's debug block.
+    const fail = (reason: string): null => {
+      const detail =
+        `${reason} (after ${Math.round((Date.now() - streamStartedAt) / 1000)}s)\n` +
+        `Tail of Gemma's output:\n${received.trim().slice(-600) || "(nothing received)"}`;
+      streamDebugRef.current = detail;
+      console.warn("[solve-stream client]", detail);
+      return null;
+    };
+
+    let res: Response;
+    try {
+      res = await fetch("/api/solve-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ problemStatementLatex: problemToUse }),
+      });
+    } catch (e) {
+      return fail(`Could not reach /api/solve-stream: ${e instanceof Error ? e.message : e}`);
+    }
+    if (!res.ok || !res.body) return fail(`/api/solve-stream responded HTTP ${res.status}`);
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -559,8 +656,11 @@ export default function Home() {
           typeof obj.workLatex === "string" &&
           typeof obj.explanation === "string"
         ) {
-          steps.push(obj);
-          setLiveSolveSteps([...steps]);
+          // Skip duplicated stepIndex lines instead of rendering them twice.
+          if (!steps.some((s) => s.stepIndex === obj.stepIndex)) {
+            steps.push(obj);
+            setLiveSolveSteps([...steps]);
+          }
         } else if (obj && obj.final === true) {
           finalLine = obj;
         }
@@ -569,19 +669,28 @@ export default function Home() {
       }
     };
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      lines.forEach(handleLine);
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        received += chunk;
+        buffer += chunk;
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        lines.forEach(handleLine);
+      }
+    } catch (e) {
+      return fail(`Stream broke mid-flight: ${e instanceof Error ? e.message : e}`);
     }
     // The stream usually ends WITHOUT a trailing newline — flush the buffer.
     handleLine(buffer + decoder.decode());
 
     const fin = finalLine as Record<string, unknown> | null;
-    if (!fin || steps.length === 0 || typeof fin.finalAnswerLatex !== "string") return null;
+    if (!fin || typeof fin.finalAnswerLatex !== "string") {
+      return fail("Stream ended without a valid final answer line");
+    }
+    if (steps.length === 0) return fail("Stream had a final line but no solution steps");
 
     return { steps, finalAnswerLatex: fin.finalAnswerLatex as string };
   }
@@ -1145,6 +1254,14 @@ export default function Home() {
                 <summary className="cursor-pointer">Raw model output</summary>
                 <pre className="mt-2 overflow-x-auto rounded-md bg-[#1c1c1e] p-4 font-mono text-xs text-white">
                   {resultError.raw}
+                </pre>
+              </details>
+            )}
+            {resultError.debug && (
+              <details className="text-xs text-ink-muted">
+                <summary className="cursor-pointer">What went wrong (technical)</summary>
+                <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded-md bg-[#1c1c1e] p-4 font-mono text-xs text-white">
+                  {resultError.debug}
                 </pre>
               </details>
             )}

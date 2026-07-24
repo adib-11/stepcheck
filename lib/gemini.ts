@@ -28,7 +28,7 @@ function sleep(ms: number) {
 }
 
 /** Returns the HTTP status the Gemma SDK attaches to an error, if any. */
-function statusOf(error: unknown): number | undefined {
+export function statusOf(error: unknown): number | undefined {
   if (typeof error === "object" && error !== null && "status" in error) {
     const status = (error as { status: unknown }).status;
     if (typeof status === "number") return status;
@@ -89,6 +89,56 @@ export async function generateWithRetry(
       const delay = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
       // Budget exhausted: fail fast now rather than retry into a hang that
       // generateJson's own regeneration loop would then double again.
+      if (Date.now() + delay >= deadline) throw error;
+      await sleep(delay + Math.random() * 1000);
+    }
+  }
+  throw lastError;
+}
+
+/**
+ * Small-call variant of generateWithRetry for the per-step fan-out routes:
+ * streams so gemma-4's hidden thinking is observable per chunk, and aborts
+ * (then retries — the runaway is stochastic, so a fresh call usually
+ * converges) once thought tokens pass `maxThoughtTokens` with no visible
+ * output. Small focused prompts think ~300 tokens; the runaway mode burns
+ * the full 32k output budget on thoughts and ends empty after ~11 min, so
+ * the bound turns a doomed call into a quick retry instead. Also retries
+ * 429/5xx (the model currently 503s under load) on the same backoff
+ * schedule as generateWithRetry.
+ */
+export async function generateBounded(
+  ai: GoogleGenAI,
+  prompt: string,
+  maxThoughtTokens: number,
+  deadline: number = Date.now() + TOTAL_BUDGET_MS
+): Promise<string> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await ai.models.generateContentStream({
+        model: MODEL,
+        contents: prompt,
+        config: { temperature: 0 },
+      });
+      let text = "";
+      for await (const chunk of response) {
+        if (chunk.text) text += chunk.text;
+        const thoughts = chunk.usageMetadata?.thoughtsTokenCount ?? 0;
+        if (!text && thoughts > maxThoughtTokens) {
+          throw new Error(
+            `Gemma runaway thinking: ${thoughts} thought tokens with no output on a small call.`
+          );
+        }
+      }
+      if (!text) throw new Error("Gemma returned an empty response.");
+      return text;
+    } catch (error) {
+      lastError = error;
+      const status = statusOf(error);
+      const isRetryable = status === undefined || status >= 500 || status === 429;
+      if (!isRetryable || attempt === MAX_RETRIES) throw error;
+      const delay = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
       if (Date.now() + delay >= deadline) throw error;
       await sleep(delay + Math.random() * 1000);
     }
